@@ -1,0 +1,41 @@
+# ── Python ──────────────────────────────────────────
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+instance/
+*.egg-info/
+dist/
+build/
+
+# ── Environment ──────────────────────────────────────
+.env
+
+# ── Uploads (user content — never commit) ────────────
+app/static/uploads/materials/*
+app/static/uploads/submissions/*
+app/static/uploads/thumbnails/*
+app/static/uploads/profiles/*
+!app/static/uploads/materials/.gitkeep
+!app/static/uploads/submissions/.gitkeep
+!app/static/uploads/thumbnails/.gitkeep
+!app/static/uploads/profiles/.gitkeep
+
+# ── Database ──────────────────────────────────────────
+*.db
+*.sqlite3
+
+# ── OS ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── VS Code ───────────────────────────────────────────
+.vscode/
+
+# ── Logs ──────────────────────────────────────────────
+*.log
+
+# ── Migrations (keep for production) ─────────────────
+# migrations/versions/

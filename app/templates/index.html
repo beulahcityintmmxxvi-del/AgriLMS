@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #52b788 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 60px 80px;
+            text-align: center;
+            max-width: 700px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .icon { font-size: 70px; margin-bottom: 20px; }
+        h1 { color: #1b4332; font-size: 2.2rem; margin-bottom: 12px; }
+        p { color: #555; font-size: 1.1rem; margin-bottom: 30px; line-height: 1.6; }
+        .badges { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 35px; }
+        .badge {
+            background: #e8f5e9;
+            color: #2d6a4f;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .badge.gold { background: #fff8e1; color: #f59f00; }
+        .badge.blue { background: #e3f2fd; color: #1565c0; }
+        .buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .btn {
+            padding: 14px 35px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #2d6a4f; color: white; }
+        .btn-primary:hover { background: #1b4332; transform: translateY(-2px); }
+        .btn-outline {
+            background: transparent;
+            color: #2d6a4f;
+            border: 2px solid #2d6a4f;
+        }
+        .btn-outline:hover { background: #2d6a4f; color: white; transform: translateY(-2px); }
+        .status {
+            margin-top: 30px;
+            padding: 12px 20px;
+            background: #f0fff4;
+            border: 1px solid #b7ebc6;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #2d6a4f;
+        }
+        .dot {
+            display: inline-block;
+            width: 10px; height: 10px;
+            background: #40c057;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .footer-note {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+
+        <div class="icon">🌿</div>
+
+        <h1>{{ app_name }}</h1>
+
+        <p>
+            A modern agricultural learning management system for
+            indigenous and modern farming education. Enroll in courses,
+            learn through videos and PDFs, and submit assignments.
+        </p>
+
+        <div class="badges">
+            <span class="badge">🎓 Course Learning</span>
+            <span class="badge gold">📹 Video Streaming</span>
+            <span class="badge blue">📄 PDF Viewer</span>
+            <span class="badge">📝 Assignment Submission</span>
+            <span class="badge gold">✅ Admin Grading</span>
+            <span class="badge blue">📊 Progress Tracking</span>
+        </div>
+
+        <div class="buttons">
+            <a href="/auth/register" class="btn btn-primary">
+                🌱 Get Started — Register
+            </a>
+            <a href="/auth/login" class="btn btn-outline">
+                🔑 Log In
+            </a>
+        </div>
+
+        <div class="status">
+            <span class="dot"></span>
+            Phase 3 Complete — Application running successfully.
+            Database connected. All {{ current_year }} systems operational.
+        </div>
+
+        <p class="footer-note">
+            © {{ current_year }} {{ app_name }} — Agricultural Education Platform
+        </p>
+
+    </div>
+</body>
+</html>

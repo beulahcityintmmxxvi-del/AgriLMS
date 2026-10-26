@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% block title %}Learning Materials{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;
+            justify-content:space-between;
+            margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
+    <div>
+        <div class="page-title">
+            <span class="title-icon">🎬</span>
+            Learning Materials
+        </div>
+        <p class="page-subtitle">
+            Upload and manage videos, PDFs, and documents
+            for course modules.
+        </p>
+    </div>
+    <a href="{{ url_for('admin.upload_material',
+                       module_id=selected_module_id if selected_module_id else '') }}"
+       class="btn btn-primary btn-lg">
+        ⬆️ Upload Material
+    </a>
+</div>
+
+{# Filter bar #}
+<div class="card" style="margin-bottom:1.5rem;">
+    <div class="card-body compact">
+        <form method="GET"
+              style="display:flex;gap:0.875rem;align-items:flex-end;flex-wrap:wrap;">
+
+            <div class="form-group" style="margin:0;min-width:200px;">
+                <label class="form-label" style="font-size:0.75rem;">
+                    Filter by Course
+                </label>
+                <select name="course_id" class="form-control"
+                        onchange="this.form.submit()">
+                    <option value="">All Courses</option>
+                    {% for course in courses %}
+                    <option value="{{ course.id }}"
+                        {% if selected_course_id == course.id %}selected{% endif %}>
+                        {{ course.title }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" style="margin:0;min-width:200px;">
+                <label class="form-label" style="font-size:0.75rem;">
+                    Filter by Module
+                </label>
+                <select name="module_id" class="form-control"
+                        onchange="this.form.submit()">
+                    <option value="">All Modules</option>
+                    {% for mod in modules %}
+                    <option value="{{ mod.id }}"
+                        {% if selected_module_id == mod.id %}selected{% endif %}>
+                        {{ mod.course.title if mod.course else '' }} —
+                        {{ mod.get_module_label() }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% if selected_module_id or selected_course_id %}
+            <a href="{{ url_for('admin.materials') }}"
+               class="btn btn-light">Clear</a>
+            {% endif %}
+
+        </form>
+    </div>
+</div>
+
+{# Materials table #}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-header-title">
+            Materials
+            <span class="badge badge-light badge-sm"
+                  style="margin-left:0.5rem;">
+                {{ materials | length }}
+            </span>
+        </h2>
+    </div>
+
+    {% if materials %}
+    <div class="table-wrapper"
+         style="border-radius:0;border:none;box-shadow:none;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Material</th>
+                    <th>Module</th>
+                    <th>Type</th>
+                    <th>Size</th>
+                    <th>Download</th>
+                    <th>Status</th>
+                    <th>Uploaded</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mat in materials %}
+                <tr>
+                    <td style="font-weight:700;color:var(--gray-500);">
+                        {{ mat.order_number }}
+                    </td>
+                    <td>
+                        <div style="display:flex;align-items:center;
+                                    gap:0.625rem;">
+                            <span style="font-size:1.3rem;">
+                                {{ mat.get_type_icon() }}
+                            </span>
+                            <div>
+                                <div style="font-weight:700;
+                                            color:var(--gray-900);
+                                            max-width:200px;
+                                            white-space:nowrap;
+                                            overflow:hidden;
+                                            text-overflow:ellipsis;">
+                                    {{ mat.title }}
+                                </div>
+                                {% if mat.is_external %}
+                                <div style="font-size:0.7rem;
+                                            color:var(--blue-mid);">
+                                    🔗 External URL
+                                </div>
+                                {% elif mat.file_name %}
+                                <div style="font-size:0.7rem;
+                                            color:var(--gray-400);">
+                                    {{ mat.file_name | truncate_words(4) }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-size:0.8125rem;color:var(--gray-500);">
+                        {{ mat.module.get_module_label()
+                           if mat.module else '—' }}
+                    </td>
+                    <td>
+                        <span class="badge badge-light">
+                            {{ mat.get_type_label() }}
+                        </span>
+                    </td>
+                    <td style="font-size:0.8125rem;color:var(--gray-500);">
+                        {{ mat.get_file_size_display() }}
+                    </td>
+                    <td style="text-align:center;">
+                        {% if mat.allow_download %}
+                        <span style="color:var(--green-mid);">✅</span>
+                        {% else %}
+                        <span style="color:var(--gray-300);">🔒</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if mat.is_published %}
+                        <span class="badge badge-success">Published</span>
+                        {% else %}
+                        <span class="badge badge-secondary">Draft</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:0.8125rem;color:var(--gray-500);
+                               white-space:nowrap;">
+                        {{ mat.date_uploaded | dateformat('%d %b %Y') }}
+                    </td>
+                    <td>
+                        <div class="cell-actions">
+                            {% if mat.stored_file_name and not mat.is_external %}
+                            <a href="{{ url_for('static',
+                                      filename='uploads/materials/' +
+                                      mat.stored_file_name) }}"
+                               target="_blank"
+                               class="btn btn-light btn-xs"
+                               title="Preview">👁️</a>
+                            {% endif %}
+
+                            <a href="{{ url_for('admin.edit_material',
+                                               material_id=mat.id) }}"
+                               class="btn btn-primary btn-xs">Edit</a>
+
+                            <form method="POST"
+                                  action="{{ url_for('admin.delete_material',
+                                                   material_id=mat.id) }}"
+                                  style="display:inline;"
+                                  data-confirm="Delete '{{ mat.title }}'?
+                                  This will permanently remove the file.">
+                                <input type="hidden" name="csrf_token"
+                                       value="{{ csrf_token() }}">
+                                <button type="submit"
+                                        class="btn btn-danger btn-xs">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body">
+        <div class="empty-state">
+            <span class="empty-state-illustration">🎬</span>
+            <h2 class="empty-state-title">No Materials Yet</h2>
+            <p class="empty-state-text">
+                Upload videos, PDFs, and documents to populate
+                your course modules.
+            </p>
+            <a href="{{ url_for('admin.upload_material') }}"
+               class="btn btn-primary">
+                ⬆️ Upload First Material
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

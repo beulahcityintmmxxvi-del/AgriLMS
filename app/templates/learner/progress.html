@@ -1,0 +1,533 @@
+{% extends 'base.html' %}
+
+{# ============================================================
+   Agri LMS — Learner Progress Page
+   ============================================================
+   File    : app/templates/learner/progress.html
+   Purpose : Displays the learner's detailed progress across
+             all enrolled courses including module completion
+             timeline, scores, and certificate status.
+   ============================================================ #}
+
+{% block title %}My Progress{% endblock %}
+
+{% block content %}
+
+{# ── Page Header ───────────────────────────────────────────── #}
+<div style="margin-bottom:2rem;">
+    <div class="page-title">
+        <span class="title-icon">📈</span>
+        My Learning Progress
+    </div>
+    <p class="page-subtitle">
+        Track your progress through enrolled courses,
+        review your module completions, and see your scores.
+    </p>
+</div>
+
+
+{# ── Summary Stats Row ─────────────────────────────────────── #}
+<div class="dashboard-grid cols-4"
+     style="margin-bottom:2rem;">
+
+    {% set total     = enrollments | length %}
+    {% set completed = enrollments | selectattr('is_completed') | list | length %}
+    {% set active    = enrollments | selectattr('status','eq','active')
+                       | rejectattr('is_completed') | list | length %}
+    {% set certs     = enrollments | selectattr('certificate_issued')
+                       | list | length %}
+
+    {% set avg_progress = (enrollments | map(attribute='progress_percent')
+                          | map('float') | sum / total | round(1))
+                          if total > 0 else 0 %}
+
+    {% for value, label, icon, cls in [
+        (total,    'Courses Enrolled', '📚', 'stat-green'),
+        (active,   'In Progress',      '▶️',  'stat-blue'),
+        (completed,'Completed',        '🏆', 'stat-gold'),
+        (certs,    'Certificates',     '🎓', 'stat-orange'),
+    ] %}
+    <div class="stat-card {{ cls }}">
+        <div class="stat-card-icon">{{ icon }}</div>
+        <div class="stat-card-content">
+            <div class="stat-card-value">{{ value }}</div>
+            <div class="stat-card-label">{{ label }}</div>
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+
+{% if enrollments %}
+
+{# ── Overall Progress Bar ──────────────────────────────────── #}
+<div class="card" style="margin-bottom:1.5rem;">
+    <div class="card-body">
+        <div style="display:flex;
+                    align-items:center;
+                    gap:1.5rem;
+                    flex-wrap:wrap;">
+
+            <div style="flex-shrink:0;text-align:center;">
+                <div style="font-size:2.5rem;font-weight:900;
+                            color:var(--green-dark);line-height:1;">
+                    {{ avg_progress | int }}%
+                </div>
+                <div style="font-size:0.75rem;color:var(--gray-400);
+                            text-transform:uppercase;
+                            letter-spacing:0.05em;">
+                    Overall
+                </div>
+            </div>
+
+            <div style="flex:1;min-width:200px;">
+                <div style="display:flex;
+                            justify-content:space-between;
+                            margin-bottom:0.375rem;
+                            font-size:0.8125rem;">
+                    <span style="color:var(--gray-500);">
+                        Average progress across all courses
+                    </span>
+                    <span style="font-weight:700;
+                                 color:var(--green-dark);">
+                        {{ avg_progress }}%
+                    </span>
+                </div>
+                <div class="progress progress-lg">
+                    <div class="progress-bar bar-gradient-green"
+                         data-value="{{ avg_progress }}"
+                         style="width:{{ avg_progress }}%;">
+                    </div>
+                </div>
+                <div style="display:flex;
+                            justify-content:space-between;
+                            margin-top:0.5rem;
+                            font-size:0.75rem;
+                            color:var(--gray-400);">
+                    <span>
+                        {{ completed }} of {{ total }}
+                        course{{ 's' if total != 1 }} completed
+                    </span>
+                    <span>{{ certs }} certificate{{ 's' if certs != 1 }}</span>
+                </div>
+            </div>
+
+            <div style="flex-shrink:0;">
+                <div class="chart-container"
+                     style="width:120px;height:120px;">
+                    <canvas id="overallProgressChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+{# ── Per-Course Progress Cards ─────────────────────────────── #}
+<div style="display:flex;
+            flex-direction:column;
+            gap:1.5rem;">
+
+    {% for enrollment in enrollments %}
+    {% set course = enrollment.course %}
+    {% if course %}
+
+    <div class="card">
+
+        {# Course header #}
+        <div class="card-header"
+             style="background:
+                    {% if enrollment.is_completed %}var(--green-ghost)
+                    {% else %}var(--white){% endif %};">
+
+            <div style="display:flex;
+                        align-items:center;
+                        gap:0.875rem;flex:1;min-width:0;">
+
+                {# Course icon #}
+                <div style="width:52px;height:52px;
+                            border-radius:0.875rem;
+                            background:var(--green-ghost);
+                            display:flex;align-items:center;
+                            justify-content:center;
+                            font-size:1.6rem;flex-shrink:0;">
+                    {% set cat_icons = {
+                        'Crop Production':'🌽','Livestock Management':'🐄',
+                        'Soil Science':'🌍','Irrigation':'💧',
+                        'Pest & Disease Control':'🦟',
+                        'Organic Farming':'🌿','Agroforestry':'🌳',
+                        'Indigenous Practices':'🏺',
+                        'Poultry Farming':'🐔',
+                        'Fishery & Aquaculture':'🐟',
+                    } %}
+                    {{ cat_icons.get(course.category, '🌾') }}
+                </div>
+
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:1.05rem;font-weight:800;
+                                color:var(--gray-900);
+                                white-space:nowrap;overflow:hidden;
+                                text-overflow:ellipsis;">
+                        {{ course.title }}
+                    </div>
+                    <div style="display:flex;
+                                align-items:center;
+                                gap:0.75rem;
+                                margin-top:3px;
+                                font-size:0.8rem;
+                                color:var(--gray-500);
+                                flex-wrap:wrap;">
+                        <span>{{ course.category or 'Agriculture' }}</span>
+                        <span>·</span>
+                        <span>Enrolled {{ enrollment.date_enrolled | dateformat('%d %b %Y') }}</span>
+                        {% if enrollment.date_completed %}
+                        <span>·</span>
+                        <span style="color:var(--green-mid);font-weight:600;">
+                            Completed {{ enrollment.date_completed | dateformat('%d %b %Y') }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+
+            {# Status badge and action #}
+            <div style="display:flex;align-items:center;
+                        gap:0.75rem;flex-shrink:0;flex-wrap:wrap;">
+
+                <span class="badge
+                    {% if enrollment.is_completed %}badge-success
+                    {% elif enrollment.status == 'active' %}badge-primary
+                    {% else %}badge-secondary{% endif %}">
+                    {% if enrollment.is_completed %}✅ Completed
+                    {% elif enrollment.status == 'active' %}▶ Active
+                    {% else %}{{ enrollment.status | capitalize }}{% endif %}
+                </span>
+
+                {% if enrollment.certificate_issued %}
+                <span class="badge badge-gold">🏆 Certificate</span>
+                {% endif %}
+
+                <a href="{{ url_for('courses.course_detail',
+                                   course_id=course.id) }}"
+                   class="btn btn-primary btn-sm">
+                    {% if enrollment.is_completed %}Review{% else %}Continue{% endif %}
+                    →
+                </a>
+
+            </div>
+
+        </div>
+
+        <div class="card-body">
+
+            {# Progress bar #}
+            <div class="progress-container"
+                 style="margin-bottom:1.5rem;">
+                <div class="progress-header">
+                    <span class="progress-label">Course Progress</span>
+                    <span class="progress-value">
+                        {{ enrollment.progress_percent | int or 0 }}%
+                    </span>
+                </div>
+                <div class="progress progress-md">
+                    <div class="progress-bar
+                        {% if enrollment.is_completed %}bar-green
+                        {% else %}bar-gradient-green{% endif %}"
+                         data-value="{{ enrollment.progress_percent or 0 }}"
+                         style="width:{{ enrollment.progress_percent or 0 }}%;">
+                    </div>
+                </div>
+                <div style="display:flex;
+                            justify-content:space-between;
+                            margin-top:0.375rem;
+                            font-size:0.75rem;
+                            color:var(--gray-400);">
+                    <span>
+                        {{ enrollment.modules_completed }}
+                        of {{ course.get_published_modules_count() }}
+                        modules completed
+                    </span>
+                    <span>
+                        {% if enrollment.final_score is not none %}
+                            Final score:
+                            <strong style="color:var(--green-dark);">
+                                {{ enrollment.final_score }}%
+                            </strong>
+                        {% else %}
+                            Score calculated on completion
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            {# Module completion timeline #}
+            {% set modules = course.get_published_modules() %}
+            {% if modules %}
+
+            <div style="margin-bottom:1.25rem;">
+                <div style="font-size:0.8rem;font-weight:700;
+                            color:var(--gray-500);
+                            text-transform:uppercase;
+                            letter-spacing:0.06em;
+                            margin-bottom:0.875rem;">
+                    Module Progress
+                </div>
+
+                <div style="display:grid;
+                            grid-template-columns:
+                                repeat(auto-fill, minmax(180px, 1fr));
+                            gap:0.625rem;">
+
+                    {% for module in modules %}
+
+                    {# Check if this module is completed by the learner #}
+                    {% set is_done = false %}
+                    {% for prog in module.progress_records %}
+                        {% if prog.user_id == current_user.id
+                               and prog.is_completed %}
+                            {% set is_done = true %}
+                        {% endif %}
+                    {% endfor %}
+
+                    <div style="display:flex;
+                                align-items:center;
+                                gap:0.625rem;
+                                padding:0.625rem 0.75rem;
+                                background:
+                                {% if is_done %}var(--green-ghost)
+                                {% else %}var(--gray-50){% endif %};
+                                border:1px solid
+                                {% if is_done %}var(--green-pale)
+                                {% else %}var(--color-border){% endif %};
+                                border-radius:0.625rem;
+                                font-size:0.8rem;">
+
+                        <div style="width:22px;height:22px;
+                                    border-radius:50%;
+                                    background:
+                                    {% if is_done %}var(--green-mid)
+                                    {% else %}var(--gray-200){% endif %};
+                                    color:
+                                    {% if is_done %}white
+                                    {% else %}var(--gray-400){% endif %};
+                                    display:flex;align-items:center;
+                                    justify-content:center;
+                                    font-size:0.65rem;font-weight:700;
+                                    flex-shrink:0;">
+                            {% if is_done %}✓
+                            {% else %}{{ module.order_number }}{% endif %}
+                        </div>
+
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:600;
+                                        color:{% if is_done %}var(--green-dark)
+                                        {% else %}var(--gray-600){% endif %};
+                                        white-space:nowrap;
+                                        overflow:hidden;
+                                        text-overflow:ellipsis;">
+                                {{ module.title }}
+                            </div>
+                            {% if module.is_last_module %}
+                            <div style="font-size:0.65rem;
+                                        color:var(--gold-dark);
+                                        font-weight:600;">
+                                Final Module
+                            </div>
+                            {% endif %}
+                        </div>
+
+                    </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+            {% endif %}
+            {# end modules #}
+
+
+            {# Course stats row #}
+            <div style="display:flex;
+                        gap:1.5rem;
+                        flex-wrap:wrap;
+                        padding-top:1rem;
+                        border-top:1px solid var(--color-border);
+                        font-size:0.8125rem;">
+
+                {% if enrollment.final_score is not none %}
+                <div>
+                    <div style="color:var(--gray-400);margin-bottom:2px;">
+                        Final Score
+                    </div>
+                    <div style="font-weight:800;
+                                color:{% if enrollment.final_score >= 70 %}
+                                    var(--green-dark)
+                                {% elif enrollment.final_score >= 50 %}
+                                    var(--gold-dark)
+                                {% else %}
+                                    var(--red-dark)
+                                {% endif %};">
+                        {{ enrollment.final_score }}%
+                        {% if enrollment.is_passed %}
+                            ✅ Passed
+                        {% else %}
+                            ❌ Not passed
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div>
+                    <div style="color:var(--gray-400);margin-bottom:2px;">
+                        Days Studying
+                    </div>
+                    <div style="font-weight:700;
+                                color:var(--blue-dark);">
+                        {{ enrollment.get_days_since_enrollment() }}
+                        day{{ 's' if enrollment.get_days_since_enrollment() != 1 }}
+                    </div>
+                </div>
+
+                {% if enrollment.get_days_to_complete() %}
+                <div>
+                    <div style="color:var(--gray-400);margin-bottom:2px;">
+                        Days to Complete
+                    </div>
+                    <div style="font-weight:700;
+                                color:var(--green-mid);">
+                        {{ enrollment.get_days_to_complete() }}
+                        day{{ 's' if enrollment.get_days_to_complete() != 1 }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if enrollment.certificate_issued %}
+                <div>
+                    <div style="color:var(--gray-400);margin-bottom:2px;">
+                        Certificate
+                    </div>
+                    <div style="font-weight:700;
+                                color:var(--gold-dark);">
+                        🏆 Issued
+                        {{ enrollment.certificate_issued_date | dateformat('%d %b %Y')
+                           if enrollment.certificate_issued_date else '' }}
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+    {# end enrollment card #}
+
+    {% endif %}
+    {% endfor %}
+
+</div>
+{# end per-course cards #}
+
+
+{% else %}
+
+{# Empty state #}
+<div class="empty-state">
+    <span class="empty-state-illustration">📈</span>
+    <h2 class="empty-state-title">No Progress Yet</h2>
+    <p class="empty-state-text">
+        Enroll in courses and start learning to track
+        your progress here.
+    </p>
+    <a href="{{ url_for('courses.catalog') }}"
+       class="btn btn-primary">
+        Browse Courses
+    </a>
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+'use strict';
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    /* ── Overall Progress Doughnut ───────────────────────── */
+    const ctx = document.getElementById('overallProgressChart');
+    if (!ctx) return;
+
+    const total     = {{ enrollments | length }};
+    const completed = {{ enrollments | selectattr('is_completed')
+                         | list | length }};
+    const active    = {{ enrollments | selectattr('status','eq','active')
+                         | rejectattr('is_completed') | list | length }};
+    const notStart  = Math.max(0, total - completed - active);
+
+    if (total > 0) {
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completed','In Progress','Not Started'],
+                datasets: [{
+                    data: [completed, active, notStart],
+                    backgroundColor: [
+                        'rgba(64,145,108,0.9)',
+                        'rgba(245,159,0,0.9)',
+                        'rgba(222,226,230,0.9)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    hoverOffset: 5,
+                }]
+            },
+            options: {
+                responsive: true,
+                cutout: '70%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ' ' + ctx.label +
+                                    ': ' + ctx.parsed +
+                                    ' course' +
+                                    (ctx.parsed !== 1 ? 's' : '');
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'center',
+                afterDraw: function(chart) {
+                    const { ctx: c, chartArea } = chart;
+                    if (!chartArea) return;
+                    const cx = (chartArea.left + chartArea.right) / 2;
+                    const cy = (chartArea.top + chartArea.bottom) / 2;
+                    c.save();
+                    c.font = 'bold 18px Segoe UI';
+                    c.fillStyle = '#1b4332';
+                    c.textAlign = 'center';
+                    c.textBaseline = 'middle';
+                    c.fillText(completed + '/' + total, cx, cy - 6);
+                    c.font = '11px Segoe UI';
+                    c.fillStyle = '#6c757d';
+                    c.fillText('Courses', cx, cy + 10);
+                    c.restore();
+                }
+            }]
+        });
+    }
+
+});
+</script>
+{% endblock %}

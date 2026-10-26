@@ -1,0 +1,789 @@
+{% extends 'base.html' %}
+
+{# ============================================================
+   Agri LMS — Admin Submission Grading Interface
+   ============================================================
+   File    : app/templates/admin/grade_submission.html
+   Purpose : Full grading workspace for a single submission.
+             Displays submitted text, file download, learner
+             info, and grading form with score and feedback.
+   ============================================================ #}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+
+{# ── Breadcrumb ────────────────────────────────────────────── #}
+<nav style="font-size:0.8125rem;color:var(--gray-500);
+            display:flex;align-items:center;
+            gap:0.375rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+    <a href="{{ url_for('admin.dashboard') }}"
+       style="color:var(--green-mid);text-decoration:none;">
+        Admin
+    </a>
+    <span>›</span>
+    <a href="{{ url_for('admin.submissions') }}"
+       style="color:var(--green-mid);text-decoration:none;">
+        Submissions
+    </a>
+    <span>›</span>
+    <span style="color:var(--gray-700);font-weight:600;">
+        Grade Submission #{{ submission.id }}
+    </span>
+</nav>
+
+
+{# ── Main Grid ─────────────────────────────────────────────── #}
+<div style="display:grid;
+            grid-template-columns:1fr 380px;
+            gap:1.5rem;
+            align-items:flex-start;"
+     id="gradeLayout">
+
+
+    {# ══ LEFT — Submission Content ════════════════════════════ #}
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+
+        {# ── Submission Header Card ── #}
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h1 style="font-size:1.2rem;font-weight:800;
+                               color:var(--gray-900);margin-bottom:0.25rem;">
+                        📝 {{ assignment.title if assignment else 'Assignment' }}
+                    </h1>
+                    <div style="display:flex;align-items:center;
+                                gap:0.625rem;flex-wrap:wrap;
+                                font-size:0.8125rem;">
+
+                        {# Learner info #}
+                        <div style="display:flex;align-items:center;
+                                    gap:0.5rem;">
+                            <div style="width:28px;height:28px;
+                                        border-radius:50%;
+                                        background:var(--green-mid);
+                                        color:white;
+                                        display:flex;align-items:center;
+                                        justify-content:center;
+                                        font-size:0.75rem;
+                                        font-weight:700;">
+                                {{ submission.learner.full_name[0].upper()
+                                   if submission.learner else '?' }}
+                            </div>
+                            <span style="font-weight:600;
+                                         color:var(--gray-800);">
+                                {{ submission.learner.full_name
+                                   if submission.learner else 'Unknown' }}
+                            </span>
+                        </div>
+
+                        <span style="color:var(--gray-300);">·</span>
+
+                        <span style="color:var(--gray-500);">
+                            Attempt {{ submission.attempt_number }}
+                        </span>
+
+                        <span style="color:var(--gray-300);">·</span>
+
+                        <span style="color:var(--gray-500);">
+                            {{ submission.get_date_submitted_display() }}
+                        </span>
+
+                        {% if submission.is_late %}
+                        <span class="badge badge-orange">🕐 Late Submission</span>
+                        {% endif %}
+
+                        <span class="badge
+                            {{ submission.get_status_badge_class() }}">
+                            {{ submission.get_status_label() }}
+                        </span>
+
+                    </div>
+                </div>
+
+                {# Assignment marks display #}
+                {% if assignment %}
+                <div style="text-align:center;flex-shrink:0;
+                            padding:0.75rem 1.25rem;
+                            background:var(--green-ghost);
+                            border-radius:0.875rem;">
+                    <div style="font-size:1.5rem;font-weight:900;
+                                color:var(--green-dark);">
+                        {{ assignment.total_marks | int }}
+                    </div>
+                    <div style="font-size:0.7rem;color:var(--gray-400);
+                                text-transform:uppercase;letter-spacing:0.05em;">
+                        Total Marks
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+
+
+        {# ── Assignment Brief ── #}
+        {% if assignment %}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-header-title">📋 Assignment Brief</h2>
+                <a href="{{ url_for('admin.edit_assignment',
+                                   assignment_id=assignment.id) }}"
+                   class="btn btn-light btn-sm">
+                    Edit Assignment
+                </a>
+            </div>
+            <div class="card-body">
+                <p style="font-size:0.9rem;color:var(--gray-700);
+                          line-height:1.7;margin-bottom:
+                          {% if assignment.instructions %}1rem{% else %}0{% endif %};">
+                    {{ assignment.description }}
+                </p>
+                {% if assignment.instructions %}
+                <div style="background:var(--blue-ghost);
+                            border:1px solid var(--blue-pale);
+                            border-radius:0.75rem;
+                            padding:0.875rem 1rem;">
+                    <div style="font-weight:700;color:var(--blue-dark);
+                                font-size:0.8rem;margin-bottom:0.5rem;">
+                        📋 Instructions
+                    </div>
+                    <div style="font-size:0.875rem;color:var(--gray-700);
+                                line-height:1.6;white-space:pre-line;">
+                        {{ assignment.instructions }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+
+        {# ── Submitted Text Answer ── #}
+        {% if submission.has_text_content() %}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-header-title">✍️ Written Answer</h2>
+                <span style="font-size:0.8rem;color:var(--gray-400);">
+                    {{ submission.text_content | length }} characters
+                </span>
+            </div>
+            <div class="card-body">
+                <div style="background:var(--gray-50);
+                            border:1px solid var(--color-border);
+                            border-radius:0.75rem;
+                            padding:1.25rem;
+                            font-size:0.9rem;
+                            color:var(--gray-700);
+                            line-height:1.75;
+                            white-space:pre-wrap;
+                            max-height:500px;
+                            overflow-y:auto;
+                            font-family:var(--font-family-base);">
+                    {{ submission.text_content }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+
+        {# ── Uploaded File ── #}
+        {% if submission.has_file() %}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-header-title">📁 Uploaded File</h2>
+            </div>
+            <div class="card-body">
+
+                <div style="display:flex;align-items:center;
+                            gap:1rem;padding:1.25rem;
+                            background:var(--gray-50);
+                            border:1px solid var(--color-border);
+                            border-radius:0.875rem;
+                            margin-bottom:{% if submission.stored_file_name and
+                            submission.file_extension == 'pdf' %}1rem{% else %}0{% endif %};">
+
+                    <span style="font-size:2.5rem;flex-shrink:0;">
+                        {{ submission.get_file_icon() }}
+                    </span>
+
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:700;color:var(--gray-900);
+                                    font-size:1rem;margin-bottom:0.25rem;
+                                    word-break:break-all;">
+                            {{ submission.file_name }}
+                        </div>
+                        <div style="font-size:0.8rem;color:var(--gray-400);
+                                    display:flex;gap:1rem;">
+                            <span>{{ submission.get_file_size_display() }}</span>
+                            {% if submission.file_extension %}
+                            <span>{{ submission.file_extension | upper }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if submission.stored_file_name %}
+                    <a href="{{ url_for('static',
+                              filename='uploads/submissions/' +
+                              submission.stored_file_name) }}"
+                       download="{{ submission.file_name }}"
+                       class="btn btn-primary btn-sm"
+                       style="flex-shrink:0;">
+                        ⬇️ Download
+                    </a>
+                    {% endif %}
+
+                </div>
+
+                {# PDF preview inside grading view #}
+                {% if submission.stored_file_name and
+                      submission.file_extension == 'pdf' %}
+                <div style="border:1px solid var(--color-border);
+                            border-radius:0.75rem;overflow:hidden;">
+                    <div style="padding:0.625rem 1rem;
+                                background:var(--green-darkest);
+                                color:rgba(255,255,255,0.8);
+                                font-size:0.8rem;font-weight:600;
+                                display:flex;
+                                align-items:center;gap:0.5rem;">
+                        📄 PDF Preview
+                    </div>
+                    <iframe
+                        src="{{ url_for('static',
+                              filename='uploads/submissions/' +
+                              submission.stored_file_name) }}"
+                        style="width:100%;height:500px;border:none;"
+                        title="Submission PDF preview">
+                    </iframe>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+        {% endif %}
+
+
+        {# ── Learner Notes ── #}
+        {% if submission.learner_notes %}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    💬 Learner's Notes to Instructor
+                </h2>
+            </div>
+            <div class="card-body">
+                <div style="font-size:0.9rem;color:var(--gray-700);
+                            line-height:1.65;
+                            padding:0.875rem 1rem;
+                            background:var(--blue-ghost);
+                            border:1px solid var(--blue-pale);
+                            border-radius:0.75rem;">
+                    {{ submission.learner_notes }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+
+        {# ── Empty submission notice ── #}
+        {% if submission.is_empty() %}
+        <div class="alert alert-warning">
+            <span class="alert-icon">⚠️</span>
+            <div class="alert-content">
+                <p class="alert-text">
+                    This submission appears to be empty —
+                    no text content and no file were found.
+                    Please investigate before grading.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+
+    </div>
+    {# end left column #}
+
+
+    {# ══ RIGHT — Grading Panel ════════════════════════════════ #}
+    <div style="display:flex;flex-direction:column;gap:1.25rem;
+                position:sticky;
+                top:calc(var(--navbar-height) + 1rem);">
+
+
+        {# ── Existing Grade Banner ── #}
+        {% if existing_grade %}
+        <div style="padding:1rem 1.25rem;
+                    background:var(--gold-ghost);
+                    border:1px solid var(--gold-pale);
+                    border-radius:0.875rem;
+                    display:flex;align-items:center;gap:0.875rem;">
+            <span style="font-size:1.75rem;">📊</span>
+            <div>
+                <div style="font-weight:700;color:var(--gold-dark);
+                            font-size:0.875rem;">
+                    Already Graded
+                </div>
+                <div style="font-size:0.8rem;color:var(--gray-600);">
+                    Score: {{ existing_grade.get_score_display() }}
+                    ({{ existing_grade.get_percent_display() }}) ·
+                    {{ existing_grade.get_grade_letter() }} Grade
+                    {% if existing_grade.is_revised %}
+                        · Revised {{ existing_grade.revision_count }}×
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+
+        {# ── Grading Form ── #}
+        <div class="grading-panel">
+
+            <div class="grading-panel-header">
+                <h2 class="grading-panel-title">
+                    {% if existing_grade %}
+                        ✏️ Revise Grade
+                    {% else %}
+                        🎯 Award Grade
+                    {% endif %}
+                </h2>
+                {% if assignment %}
+                <span style="color:rgba(255,255,255,0.6);
+                             font-size:0.8rem;">
+                    Max: {{ assignment.total_marks | int }} marks
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="grading-panel-body">
+
+                <form method="POST"
+                      action="{{ url_for('admin.grade_submission',
+                                        submission_id=submission.id) }}"
+                      id="gradingForm"
+                      novalidate>
+
+                    <input type="hidden" name="csrf_token"
+                           value="{{ csrf_token() }}">
+
+                    {# ── Score Input ── #}
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span class="label-icon">🎯</span>
+                            Score Awarded
+                            <span class="required">*</span>
+                        </label>
+
+                        <div class="score-input-group">
+                            <input type="number"
+                                   id="scoreInput"
+                                   name="score_awarded"
+                                   class="form-control score-input"
+                                   min="0"
+                                   max="{{ assignment.total_marks | int if assignment else 100 }}"
+                                   step="0.5"
+                                   placeholder="0"
+                                   value="{{ existing_grade.score_awarded | int if existing_grade else '' }}"
+                                   required>
+                            <span class="score-separator">/</span>
+                            <span class="score-max">
+                                {{ assignment.total_marks | int if assignment else 100 }}
+                            </span>
+                        </div>
+
+                        {# Live percentage and grade letter display #}
+                        <div style="margin-top:0.875rem;
+                                    display:flex;
+                                    align-items:center;
+                                    gap:1rem;">
+
+                            <div id="percentDisplay"
+                                 class="score-percent-display">
+                                {% if existing_grade %}
+                                    {{ existing_grade.get_percent_display() }}
+                                {% else %}
+                                    —%
+                                {% endif %}
+                            </div>
+
+                            <div id="gradeLetterDisplay"
+                                 class="grade-badge"
+                                 style="width:44px;height:44px;
+                                        font-size:1.25rem;">
+                                {% if existing_grade %}
+                                    {{ existing_grade.get_grade_letter() }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </div>
+
+                            <div>
+                                <div id="gradeLabelDisplay"
+                                     style="font-size:0.8rem;
+                                            font-weight:700;
+                                            color:var(--gray-700);">
+                                    {% if existing_grade %}
+                                        {{ existing_grade.get_grade_label() }}
+                                    {% endif %}
+                                </div>
+                                <div id="passFailDisplay"
+                                     style="font-size:0.75rem;
+                                            color:var(--gray-400);">
+                                    Pass mark:
+                                    {{ assignment.pass_mark | int if assignment else 50 }}
+                                    marks
+                                </div>
+                            </div>
+
+                        </div>
+
+                        {# Progress bar visualization #}
+                        <div class="progress progress-sm"
+                             style="margin-top:0.75rem;">
+                            <div class="progress-bar"
+                                 id="scoreProgressBar"
+                                 data-value="{{ ((existing_grade.score_awarded / assignment.total_marks) * 100) | int if existing_grade and assignment else 0 }}"
+                                 style="width:{{ ((existing_grade.score_awarded / assignment.total_marks) * 100) | int if existing_grade and assignment else 0 }}%;
+                                        background:var(--green-mid);">
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {# ── Late Penalty Info ── #}
+                    {% if submission.is_late and assignment and
+                          assignment.late_penalty_percent and
+                          (assignment.late_penalty_percent | float) > 0 %}
+                    <div class="alert alert-warning alert-inline"
+                         style="margin-bottom:1rem;">
+                        <span class="alert-icon">⚠️</span>
+                        <div class="alert-content">
+                            <p class="alert-text">
+                                Late submission — a
+                                {{ assignment.late_penalty_percent | int }}%
+                                penalty will be applied automatically.
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {# ── Written Feedback ── #}
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span class="label-icon">💬</span>
+                            Feedback to Learner
+                        </label>
+                        <textarea name="feedback"
+                                  class="form-control tall"
+                                  placeholder="Write constructive feedback explaining:
+• What the learner did well
+• What needs improvement
+• Specific suggestions for agricultural practice
+• Encouragement for further learning..."
+                                  data-max-chars="3000">{{ existing_grade.feedback if existing_grade else '' }}</textarea>
+                        <div class="char-counter"></div>
+                    </div>
+
+                    {# ── Internal Notes ── #}
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span class="label-icon">🔒</span>
+                            Internal Notes
+                            <span class="optional">
+                                (admin only — not shown to learner)
+                            </span>
+                        </label>
+                        <textarea name="internal_notes"
+                                  class="form-control short"
+                                  placeholder="Private grading notes, moderation comments...">{{ existing_grade.internal_notes if existing_grade else '' }}</textarea>
+                    </div>
+
+                    {# ── Revision Reason (edit only) ── #}
+                    {% if existing_grade %}
+                    <div class="form-group">
+                        <label class="form-label">
+                            Reason for Revision
+                        </label>
+                        <input type="text" name="revision_reason"
+                               class="form-control"
+                               placeholder="e.g. Marking error corrected, moderation applied">
+                    </div>
+                    {% endif %}
+
+                    {# ── Flag Submission ── #}
+                    <div class="form-group">
+                        <label class="form-check">
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   name="flag_submission"
+                                   id="flagSubmission"
+                                   {% if submission.is_flagged %}
+                                       checked{% endif %}>
+                            <span class="form-check-label">
+                                🚩 Flag this submission for attention
+                            </span>
+                        </label>
+                    </div>
+
+                    {# ── Submit Grade ── #}
+                    <button type="submit"
+                            class="btn btn-primary btn-block btn-lg"
+                            id="gradeSubmitBtn">
+                        {% if existing_grade %}
+                            ✏️ Update Grade
+                        {% else %}
+                            ✅ Submit Grade
+                        {% endif %}
+                    </button>
+
+                    <a href="{{ url_for('admin.submissions') }}"
+                       class="btn btn-light btn-block"
+                       style="margin-top:0.75rem;">
+                        ← Back to Queue
+                    </a>
+
+                </form>
+
+            </div>
+
+        </div>
+        {# end grading panel #}
+
+
+        {# ── Learner Summary ── #}
+        {% if submission.learner %}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-header-title"
+                    style="font-size:0.875rem;">
+                    👤 Learner Profile
+                </h2>
+            </div>
+            <div class="card-body compact">
+
+                <div style="display:flex;
+                            align-items:center;gap:0.875rem;
+                            padding-bottom:0.875rem;
+                            margin-bottom:0.875rem;
+                            border-bottom:1px solid var(--color-border);">
+
+                    <div style="width:44px;height:44px;border-radius:50%;
+                                background:var(--green-mid);color:white;
+                                display:flex;align-items:center;
+                                justify-content:center;
+                                font-size:1.1rem;font-weight:700;
+                                flex-shrink:0;">
+                        {{ submission.learner.full_name[0].upper() }}
+                    </div>
+
+                    <div>
+                        <div style="font-weight:700;font-size:0.9rem;
+                                    color:var(--gray-900);">
+                            {{ submission.learner.full_name }}
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--gray-400);">
+                            {{ submission.learner.email }}
+                        </div>
+                    </div>
+
+                </div>
+
+                {% set learner = submission.learner %}
+                {% set learner_items = [
+                    ('📍', 'Location',
+                     (learner.state + ', ' if learner.state else '') +
+                     (learner.country or 'Not set')),
+                    ('📅', 'Member Since',
+                     learner.date_registered | dateformat('%d %b %Y')
+                     if learner.date_registered else 'N/A'),
+                    ('🎓', 'Enrolled Courses',
+                     learner.total_enrollments() | string),
+                    ('✅', 'Completed',
+                     learner.completed_courses() | string),
+                ] %}
+
+                {% for icon, label, value in learner_items %}
+                <div style="display:flex;justify-content:space-between;
+                            align-items:center;font-size:0.8rem;
+                            margin-bottom:0.5rem;">
+                    <span style="color:var(--gray-500);">
+                        {{ icon }} {{ label }}
+                    </span>
+                    <span style="font-weight:600;color:var(--gray-700);">
+                        {{ value }}
+                    </span>
+                </div>
+                {% endfor %}
+
+            </div>
+        </div>
+        {% endif %}
+
+
+        {# ── Other Submissions for this Assignment ── #}
+        {% if assignment %}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-header-title"
+                    style="font-size:0.875rem;">
+                    📊 Assignment Stats
+                </h2>
+            </div>
+            <div class="card-body compact">
+
+                {% set stats = [
+                    ('Total Submissions', assignment.get_total_submissions()),
+                    ('Graded',            assignment.get_graded_submissions_count()),
+                    ('Pending',           assignment.get_pending_submissions_count()),
+                    ('Avg Score',
+                     (assignment.get_average_score() | round(1) | string + '%')
+                     if assignment.get_average_score() is not none else 'N/A'),
+                ] %}
+
+                {% for label, value in stats %}
+                <div style="display:flex;justify-content:space-between;
+                            align-items:center;font-size:0.8rem;
+                            margin-bottom:0.5rem;">
+                    <span style="color:var(--gray-500);">{{ label }}</span>
+                    <span style="font-weight:700;color:var(--green-dark);">
+                        {{ value }}
+                    </span>
+                </div>
+                {% endfor %}
+
+            </div>
+        </div>
+        {% endif %}
+
+
+    </div>
+    {# end right sidebar #}
+
+
+</div>
+{# end main grid #}
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+'use strict';
+
+/* =============================================================
+   Grading Interface — Live Score Calculator
+   ============================================================= */
+
+const scoreInput   = document.getElementById('scoreInput');
+const percentDisp  = document.getElementById('percentDisplay');
+const letterDisp   = document.getElementById('gradeLetterDisplay');
+const labelDisp    = document.getElementById('gradeLabelDisplay');
+const passDisp     = document.getElementById('passFailDisplay');
+const progressBar  = document.getElementById('scoreProgressBar');
+
+const maxMarks  = {{ assignment.total_marks | float if assignment else 100 }};
+const passMarks = {{ assignment.pass_mark | float if assignment else 50 }};
+
+const GRADE_COLORS = {
+    'A': '#2d6a4f', 'B': '#1976d2',
+    'C': '#f59f00', 'D': '#f76707', 'F': '#e03131'
+};
+
+const GRADE_LABELS = {
+    'A': 'Distinction', 'B': 'Merit',
+    'C': 'Pass',        'D': 'Below Pass', 'F': 'Fail'
+};
+
+function getGradeLetter(pct) {
+    if (pct >= 70) return 'A';
+    if (pct >= 60) return 'B';
+    if (pct >= 50) return 'C';
+    if (pct >= 40) return 'D';
+    return 'F';
+}
+
+function updateScoreDisplay() {
+    const score = parseFloat(scoreInput.value) || 0;
+    const clamped = Math.min(Math.max(score, 0), maxMarks);
+    const pct   = maxMarks > 0
+        ? Math.round((clamped / maxMarks) * 100 * 10) / 10
+        : 0;
+    const letter = getGradeLetter(pct);
+    const color  = GRADE_COLORS[letter] || '#6c757d';
+    const passed = clamped >= passMarks;
+
+    /* Update percent display */
+    if (percentDisp) {
+        percentDisp.textContent = pct + '%';
+        percentDisp.style.color = color;
+    }
+
+    /* Update grade letter badge */
+    if (letterDisp) {
+        letterDisp.textContent    = letter;
+        letterDisp.style.background = color;
+        letterDisp.style.color    = 'white';
+        letterDisp.style.display  = 'flex';
+        letterDisp.style.alignItems = 'center';
+        letterDisp.style.justifyContent = 'center';
+        letterDisp.style.borderRadius = '0.5rem';
+    }
+
+    /* Update label */
+    if (labelDisp) {
+        labelDisp.textContent = GRADE_LABELS[letter] || '';
+        labelDisp.style.color = color;
+    }
+
+    /* Update pass/fail */
+    if (passDisp) {
+        passDisp.textContent = passed
+            ? '✅ Will pass (≥ ' + passMarks + ' marks)'
+            : '❌ Will not pass (< ' + passMarks + ' marks)';
+        passDisp.style.color = passed
+            ? 'var(--green-mid)'
+            : 'var(--red-mid)';
+    }
+
+    /* Update progress bar */
+    if (progressBar) {
+        progressBar.style.width  = pct + '%';
+        progressBar.style.background = color;
+    }
+}
+
+if (scoreInput) {
+    scoreInput.addEventListener('input', updateScoreDisplay);
+    /* Run on page load if editing existing grade */
+    if (scoreInput.value) updateScoreDisplay();
+}
+
+
+/* ── Responsive layout ───────────────────────────────────── */
+(function() {
+    const layout = document.getElementById('gradeLayout');
+    if (!layout) return;
+    function adj() {
+        layout.style.gridTemplateColumns =
+            window.innerWidth <= 991 ? '1fr' : '1fr 380px';
+    }
+    adj();
+    window.addEventListener('resize', adj);
+})();
+
+
+/* ── Grade form loading state ────────────────────────────── */
+(function() {
+    const form = document.getElementById('gradingForm');
+    const btn  = document.getElementById('gradeSubmitBtn');
+    if (!form || !btn) return;
+    form.addEventListener('submit', function() {
+        btn.disabled    = true;
+        btn.textContent = 'Saving grade...';
+        btn.classList.add('loading');
+    });
+})();
+
+</script>
+{% endblock %}

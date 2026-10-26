@@ -1,0 +1,1005 @@
+{% extends 'base.html' %}
+
+{# ============================================================
+   Agri LMS — Assignment Submission Page
+   ============================================================
+   File    : app/templates/learner/submit_assignment.html
+   Purpose : Full assignment detail and submission interface.
+             Shows assignment instructions, description, and
+             a submission form accepting typed text and/or
+             file upload depending on assignment type.
+             Also displays submission history and grade feedback.
+   ============================================================ #}
+
+{% block title %}
+    {% if viewing_submission %}
+        Submission: {{ assignment.title }}
+    {% else %}
+        Submit: {{ assignment.title }}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+
+{# ── Breadcrumb ────────────────────────────────────────────── #}
+<nav style="font-size: 0.8125rem;
+            color: var(--gray-500);
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;">
+    <a href="{{ url_for('learner.dashboard') }}"
+       style="color: var(--green-mid); text-decoration: none;">
+        Dashboard
+    </a>
+    <span>›</span>
+    <a href="{{ url_for('learner.assignments') }}"
+       style="color: var(--green-mid); text-decoration: none;">
+        Assignments
+    </a>
+    <span>›</span>
+    <span style="color: var(--gray-700); font-weight: 600;">
+        {{ assignment.title | truncate_words(8) }}
+    </span>
+</nav>
+
+
+{# ── Main Layout Grid ──────────────────────────────────────── #}
+<div style="display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 1.5rem;
+            align-items: flex-start;"
+     id="submitLayout">
+
+
+    {# ══ LEFT COLUMN ══════════════════════════════════════════ #}
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+
+        {# ── Assignment Detail Card ── #}
+        <div class="card">
+
+            <div class="card-header">
+                <h1 class="card-header-title"
+                    style="font-size: 1.25rem;">
+                    📝 {{ assignment.title }}
+                </h1>
+                <div style="display: flex;
+                            align-items: center;
+                            gap: 0.5rem;
+                            flex-shrink: 0;
+                            flex-wrap: wrap;">
+
+                    <span class="badge
+                        {{ assignment.get_status_badge_class() }}">
+                        {{ assignment.status | capitalize }}
+                    </span>
+
+                    {% if assignment.is_past_due() %}
+                    <span class="badge badge-danger">
+                        ⚠️ Overdue
+                    </span>
+                    {% endif %}
+
+                </div>
+            </div>
+
+            <div class="card-body">
+
+                {# Description #}
+                <div style="font-size: 0.9375rem;
+                            color: var(--gray-700);
+                            line-height: 1.7;
+                            margin-bottom: 1.5rem;">
+                    {{ assignment.description | replace('\n', '<br>') | safe }}
+                </div>
+
+                {# Instructions box #}
+                {% if assignment.instructions %}
+                <div style="background: var(--blue-ghost);
+                            border: 1px solid var(--blue-pale);
+                            border-radius: 0.875rem;
+                            padding: 1rem 1.25rem;
+                            margin-bottom: 1.5rem;">
+                    <div style="font-weight: 700;
+                                color: var(--blue-dark);
+                                font-size: 0.875rem;
+                                margin-bottom: 0.625rem;
+                                display: flex;
+                                align-items: center;
+                                gap: 0.375rem;">
+                        📋 Submission Instructions
+                    </div>
+                    <div style="font-size: 0.875rem;
+                                color: var(--gray-700);
+                                line-height: 1.65;
+                                white-space: pre-line;">
+                        {{ assignment.instructions }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Reference links #}
+                {% if assignment.get_reference_links_list() %}
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="font-weight: 700;
+                                color: var(--gray-700);
+                                font-size: 0.875rem;
+                                margin-bottom: 0.5rem;">
+                        🔗 Reference Resources
+                    </div>
+                    <div style="display: flex;
+                                flex-direction: column;
+                                gap: 0.375rem;">
+                        {% for link in assignment.get_reference_links_list() %}
+                        <a href="{{ link }}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           style="font-size: 0.8125rem;
+                                  color: var(--blue-mid);
+                                  text-decoration: none;
+                                  display: flex;
+                                  align-items: center;
+                                  gap: 0.375rem;">
+                            🔗 {{ link | truncate_words(8) }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Admin attachment download #}
+                {% if assignment.attachment_stored_filename %}
+                <div style="padding: 0.875rem 1rem;
+                            background: var(--gold-ghost);
+                            border: 1px solid var(--gold-pale);
+                            border-radius: 0.75rem;
+                            display: flex;
+                            align-items: center;
+                            gap: 0.875rem;
+                            margin-bottom: 1.5rem;">
+                    <span style="font-size: 1.5rem;">📎</span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 700;
+                                    font-size: 0.875rem;
+                                    color: var(--gray-800);">
+                            Assignment Attachment
+                        </div>
+                        <div style="font-size: 0.75rem;
+                                    color: var(--gray-500);">
+                            {{ assignment.attachment_filename or 'Download file' }}
+                        </div>
+                    </div>
+                    <a href="{{ url_for('static',
+                              filename='uploads/materials/' +
+                              assignment.attachment_stored_filename) }}"
+                       download="{{ assignment.attachment_filename }}"
+                       class="btn btn-secondary btn-sm">
+                        ⬇️ Download
+                    </a>
+                </div>
+                {% endif %}
+
+            </div>
+
+        </div>
+        {# end assignment detail #}
+
+
+        {# ── Submission Form ── #}
+        {% if can_submit and not viewing_submission %}
+
+        <div class="submission-box">
+
+            <div class="submission-box-header">
+                <div class="submission-box-title">
+                    📤 Submit Your Work
+                </div>
+                <p class="submission-box-subtitle">
+                    {{ assignment.get_submission_type_label() }}
+                    accepted
+                    {% if assignment.max_submissions and
+                          assignment.max_submissions > 1 %}
+                        · Up to {{ assignment.max_submissions }}
+                        attempts allowed
+                    {% elif assignment.max_submissions == 1 %}
+                        · 1 attempt only
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="submission-box-body">
+
+                <form method="POST"
+                      action="{{ url_for('learner.submit_assignment',
+                                        assignment_id=assignment.id) }}"
+                      enctype="multipart/form-data"
+                      id="submissionForm"
+                      novalidate>
+
+                    <input type="hidden"
+                           name="csrf_token"
+                           value="{{ csrf_token() }}">
+
+                    {# ── Text Submission Area ── #}
+                    {% from app.models.assignment import
+                       ASSIGNMENT_TYPE_TEXT, ASSIGNMENT_TYPE_BOTH
+                       import ASSIGNMENT_TYPE_TEXT, ASSIGNMENT_TYPE_BOTH
+                       ignore missing %}
+
+                    {% if assignment.submission_type in
+                          ['text_submission', 'both'] %}
+
+                    <div class="form-group">
+                        <label for="text_content" class="form-label">
+                            <span class="label-icon">✍️</span>
+                            Your Written Answer
+                            {% if assignment.submission_type == 'text_submission' %}
+                            <span class="required">*</span>
+                            {% else %}
+                            <span class="optional">(optional if uploading file)</span>
+                            {% endif %}
+                        </label>
+                        <textarea id="text_content"
+                                  name="text_content"
+                                  class="form-control tall"
+                                  placeholder="Type your answer here. Be clear, detailed, and use examples from your farming experience where relevant..."
+                                  data-max-chars="10000"
+                                  {% if assignment.submission_type == 'text_submission' %}
+                                  required
+                                  {% endif %}>
+                        </textarea>
+                        <div style="display: flex;
+                                    justify-content: space-between;
+                                    margin-top: 0.375rem;">
+                            <span class="form-text">
+                                Supports plain text. Your answer
+                                is automatically saved as you type.
+                            </span>
+                            <span class="char-counter"></span>
+                        </div>
+                    </div>
+
+                    {% endif %}
+
+                    {# ── File Upload Area ── #}
+                    {% if assignment.submission_type in
+                          ['file_upload', 'both'] %}
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span class="label-icon">📁</span>
+                            Upload Your File
+                            {% if assignment.submission_type == 'file_upload' %}
+                            <span class="required">*</span>
+                            {% else %}
+                            <span class="optional">(optional if typing answer)</span>
+                            {% endif %}
+                        </label>
+
+                        <div class="file-upload-area"
+                             data-preview-target="filePreviewArea">
+                            <input type="file"
+                                   name="submission_file"
+                                   id="submissionFile"
+                                   accept="{{ '.' + assignment.get_allowed_file_types_list() | join(',.') if assignment.get_allowed_file_types_list() else '*' }}"
+                                   {% if assignment.submission_type == 'file_upload' %}
+                                   required
+                                   {% endif %}>
+
+                            <span class="file-upload-icon">📁</span>
+
+                            <div class="file-upload-title">
+                                Drag and drop your file here
+                            </div>
+                            <div class="file-upload-subtitle">
+                                or click to browse your device
+                            </div>
+
+                            {# Allowed file types display #}
+                            <div class="file-upload-types">
+                                {% set allowed = assignment.get_allowed_file_types_list() %}
+                                {% if allowed %}
+                                    {% for ext in allowed %}
+                                    <span class="badge badge-light badge-sm">
+                                        .{{ ext | upper }}
+                                    </span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="badge badge-light badge-sm">
+                                        PDF, DOCX, PNG, JPG
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <div style="margin-top: 0.75rem;
+                                        font-size: 0.75rem;
+                                        color: var(--gray-400);">
+                                Maximum file size:
+                                {{ assignment.max_file_size_mb or 20 }} MB
+                            </div>
+
+                        </div>
+
+                        <div id="filePreviewArea"></div>
+
+                    </div>
+
+                    {% endif %}
+
+                    {# ── Learner Notes ── #}
+                    <div class="form-group">
+                        <label for="learner_notes" class="form-label">
+                            <span class="label-icon">💬</span>
+                            Additional Notes
+                            <span class="optional">(optional)</span>
+                        </label>
+                        <textarea id="learner_notes"
+                                  name="learner_notes"
+                                  class="form-control short"
+                                  placeholder="Any additional context, clarifications, or notes for the instructor...">
+                        </textarea>
+                    </div>
+
+                    {# ── Submit Button ── #}
+                    <div style="display: flex;
+                                align-items: center;
+                                gap: 1rem;
+                                flex-wrap: wrap;">
+
+                        <button type="submit"
+                                class="btn btn-primary btn-lg"
+                                id="submitBtn">
+                            <span id="submitBtnText">
+                                📤 Submit Assignment
+                                {% if assignment.is_past_due() %}
+                                    (Late)
+                                {% endif %}
+                            </span>
+                        </button>
+
+                        <a href="{{ url_for('learner.assignments') }}"
+                           class="btn btn-light btn-lg">
+                            Cancel
+                        </a>
+
+                    </div>
+
+                    {# Late submission warning #}
+                    {% if assignment.is_past_due() %}
+                    <div class="alert alert-warning alert-inline"
+                         style="margin-top: 1rem;">
+                        <span class="alert-icon">⚠️</span>
+                        <div class="alert-content">
+                            <p class="alert-text">
+                                This assignment is past its due date.
+                                {% if assignment.late_penalty_percent and
+                                      assignment.late_penalty_percent > 0 %}
+                                    A {{ assignment.late_penalty_percent | int }}%
+                                    late penalty will be applied to your score.
+                                {% endif %}
+                                Your submission will be marked as late.
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </form>
+
+            </div>
+
+        </div>
+        {# end submission form #}
+
+
+        {% elif not can_submit and not viewing_submission %}
+
+        {# Cannot submit — show reason #}
+        <div class="card">
+            <div class="card-body">
+                <div class="alert
+                    {% if not assignment.is_accepting_submissions() %}
+                        alert-warning
+                    {% else %}
+                        alert-info
+                    {% endif %}">
+                    <span class="alert-icon">
+                        {% if not assignment.is_accepting_submissions() %}
+                            🔒
+                        {% else %}
+                            ℹ️
+                        {% endif %}
+                    </span>
+                    <div class="alert-content">
+                        <p class="alert-text">
+                            {% if not assignment.is_accepting_submissions() %}
+                                This assignment is no longer accepting
+                                new submissions.
+                            {% else %}
+                                You have used all
+                                {{ assignment.max_submissions }}
+                                submission attempt(s) for this assignment.
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% endif %}
+
+
+        {# ── Viewing a Specific Submission ── #}
+        {% if viewing_submission %}
+
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    📄 Your Submission
+                    (Attempt {{ viewing_submission.attempt_number }})
+                </h2>
+                <div style="display: flex; gap: 0.5rem;">
+                    <span class="badge
+                        {{ viewing_submission.get_status_badge_class() }}">
+                        {{ viewing_submission.get_status_label() }}
+                    </span>
+                    {% if viewing_submission.is_late %}
+                    <span class="badge badge-orange">Late</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card-body">
+
+                <div style="font-size: 0.8125rem;
+                            color: var(--gray-500);
+                            margin-bottom: 1.25rem;">
+                    Submitted on
+                    {{ viewing_submission.get_date_submitted_display() }}
+                </div>
+
+                {# Text content #}
+                {% if viewing_submission.has_text_content() %}
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="font-weight: 700;
+                                color: var(--gray-700);
+                                font-size: 0.875rem;
+                                margin-bottom: 0.625rem;
+                                display: flex;
+                                align-items: center;
+                                gap: 0.375rem;">
+                        ✍️ Written Answer
+                    </div>
+                    <div style="background: var(--gray-50);
+                                border: 1px solid var(--color-border);
+                                border-radius: 0.75rem;
+                                padding: 1rem 1.25rem;
+                                font-size: 0.9rem;
+                                color: var(--gray-700);
+                                line-height: 1.7;
+                                white-space: pre-wrap;
+                                max-height: 400px;
+                                overflow-y: auto;">
+                        {{ viewing_submission.text_content }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Uploaded file #}
+                {% if viewing_submission.has_file() %}
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="font-weight: 700;
+                                color: var(--gray-700);
+                                font-size: 0.875rem;
+                                margin-bottom: 0.625rem;">
+                        📁 Uploaded File
+                    </div>
+                    <div style="display: flex;
+                                align-items: center;
+                                gap: 0.875rem;
+                                padding: 0.875rem 1rem;
+                                background: var(--gray-50);
+                                border: 1px solid var(--color-border);
+                                border-radius: 0.75rem;">
+                        <span style="font-size: 1.75rem;">
+                            {{ viewing_submission.get_file_icon() }}
+                        </span>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 600;
+                                        color: var(--gray-800);
+                                        font-size: 0.875rem;
+                                        white-space: nowrap;
+                                        overflow: hidden;
+                                        text-overflow: ellipsis;">
+                                {{ viewing_submission.file_name }}
+                            </div>
+                            <div style="font-size: 0.75rem;
+                                        color: var(--gray-400);">
+                                {{ viewing_submission.get_file_size_display() }}
+                            </div>
+                        </div>
+                        <a href="{{ url_for('static',
+                                  filename=viewing_submission.get_file_url()) }}"
+                           download="{{ viewing_submission.file_name }}"
+                           class="btn btn-outline-primary btn-sm">
+                            ⬇️ Download
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Learner notes #}
+                {% if viewing_submission.learner_notes %}
+                <div style="padding: 0.875rem 1rem;
+                            background: var(--blue-ghost);
+                            border: 1px solid var(--blue-pale);
+                            border-radius: 0.75rem;">
+                    <div style="font-weight: 700;
+                                color: var(--blue-dark);
+                                font-size: 0.8rem;
+                                margin-bottom: 0.375rem;">
+                        💬 Your Notes to Instructor
+                    </div>
+                    <div style="font-size: 0.875rem;
+                                color: var(--gray-700);
+                                line-height: 1.55;">
+                        {{ viewing_submission.learner_notes }}
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        {# ── Grade Feedback Card ── #}
+        {% if viewing_submission.is_graded and viewing_submission.grade %}
+
+        <div class="grade-result-card
+            {% if not viewing_submission.grade.is_passed %}failed{% endif %}">
+
+            <div style="margin-bottom: 1.5rem;">
+
+                {# Grade letter big #}
+                <div class="grade-letter-large
+                    {% if not viewing_submission.grade.is_passed %}
+                        style='background: var(--red-mid)'
+                    {% endif %}"
+                     style="margin: 0 auto 0.75rem;">
+                    {{ viewing_submission.grade.get_grade_letter() }}
+                </div>
+
+                <div class="grade-score-display">
+                    {{ viewing_submission.get_score_display() }}
+                </div>
+
+                <div class="grade-score-label">
+                    {{ viewing_submission.grade.get_grade_label() }}
+                    · {{ viewing_submission.grade.get_percent_display() }}
+
+                    {% if viewing_submission.grade.late_penalty_applied and
+                          (viewing_submission.grade.late_penalty_applied | float) > 0 %}
+                        ({{ viewing_submission.grade.get_adjusted_percent_display() }}
+                        after late penalty)
+                    {% endif %}
+                </div>
+
+                <span class="badge
+                    {% if viewing_submission.grade.is_passed %}badge-success
+                    {% else %}badge-danger{% endif %}"
+                      style="font-size: 0.875rem; padding: 6px 16px;">
+                    {% if viewing_submission.grade.is_passed %}
+                        ✅ Passed
+                    {% else %}
+                        ❌ Did not pass
+                    {% endif %}
+                </span>
+
+            </div>
+
+            {# Instructor feedback #}
+            {% if viewing_submission.grade.feedback %}
+            <div style="background: rgba(255,255,255,0.8);
+                        border-radius: 0.875rem;
+                        padding: 1.25rem;
+                        text-align: left;
+                        margin-top: 1rem;">
+
+                <div style="font-weight: 700;
+                            color: var(--gray-800);
+                            font-size: 0.875rem;
+                            margin-bottom: 0.75rem;
+                            display: flex;
+                            align-items: center;
+                            gap: 0.375rem;">
+                    💬 Instructor Feedback
+                </div>
+
+                <div style="font-size: 0.9rem;
+                            color: var(--gray-700);
+                            line-height: 1.7;
+                            white-space: pre-line;">
+                    {{ viewing_submission.grade.feedback }}
+                </div>
+
+            </div>
+            {% endif %}
+
+            {# Rubric breakdown #}
+            {% if viewing_submission.grade.get_rubric_scores_dict() %}
+            <div style="background: rgba(255,255,255,0.8);
+                        border-radius: 0.875rem;
+                        padding: 1.25rem;
+                        text-align: left;
+                        margin-top: 0.75rem;">
+
+                <div style="font-weight: 700;
+                            color: var(--gray-800);
+                            font-size: 0.875rem;
+                            margin-bottom: 0.875rem;">
+                    📊 Score Breakdown
+                </div>
+
+                <div style="display: flex;
+                            flex-direction: column;
+                            gap: 0.625rem;">
+                    {% for criterion, score in
+                       viewing_submission.grade.get_rubric_scores_dict().items() %}
+                    <div style="display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                font-size: 0.8125rem;">
+                        <span style="color: var(--gray-600);">
+                            {{ criterion }}
+                        </span>
+                        <span style="font-weight: 700;
+                                     color: var(--green-dark);">
+                            {{ score }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+            {% endif %}
+
+            {# Grade revision notice #}
+            {% if viewing_submission.grade.is_revised %}
+            <div style="margin-top: 1rem;
+                        font-size: 0.75rem;
+                        color: rgba(0,0,0,0.45);">
+                ℹ️ This grade was revised on
+                {{ viewing_submission.grade.date_revised | dateformat }}
+                {% if viewing_submission.grade.revision_reason %}
+                    — {{ viewing_submission.grade.revision_reason }}
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {# Graded by and date #}
+            <div style="margin-top: 1rem;
+                        font-size: 0.75rem;
+                        color: rgba(0,0,0,0.4);">
+                Graded on
+                {{ viewing_submission.grade.get_date_graded_display() }}
+            </div>
+
+        </div>
+        {# end grade result card #}
+
+        {% elif viewing_submission and not viewing_submission.is_graded %}
+
+        <div class="info-card">
+            <div class="info-card-icon">⏳</div>
+            <div class="info-card-content">
+                <div class="info-card-title">
+                    Awaiting Instructor Review
+                </div>
+                <p class="info-card-text">
+                    Your submission has been received and is
+                    in the grading queue. You will be able to
+                    see your grade and feedback here once the
+                    instructor has reviewed your work.
+                </p>
+            </div>
+        </div>
+
+        {% endif %}
+
+        {% endif %}
+        {# end viewing_submission #}
+
+
+    </div>
+    {# end left column #}
+
+
+    {# ══ RIGHT SIDEBAR ════════════════════════════════════════ #}
+    <div style="display: flex;
+                flex-direction: column;
+                gap: 1.25rem;
+                position: sticky;
+                top: calc(var(--navbar-height) + 1rem);">
+
+
+        {# ── Assignment Info Card ── #}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title"
+                    style="font-size: 0.9rem;">
+                    📋 Assignment Details
+                </h2>
+            </div>
+
+            <div class="card-body compact">
+                <div style="display: flex;
+                            flex-direction: column;
+                            gap: 0.75rem;">
+
+                    {% set info_items = [
+                        ('🎯', 'Total Marks',
+                         assignment.total_marks | int ~ ' marks'),
+                        ('📊', 'Pass Mark',
+                         (assignment.pass_mark | int ~ ' marks')
+                         if assignment.pass_mark else 'Not set'),
+                        ('📤', 'Submission Type',
+                         assignment.get_submission_type_label()),
+                        ('🔄', 'Max Attempts',
+                         (assignment.max_submissions ~ ' attempt' ~
+                          ('s' if assignment.max_submissions != 1 else ''))
+                         if assignment.max_submissions else 'Unlimited'),
+                        ('📅', 'Deadline',
+                         assignment.get_due_date_display()),
+                    ] %}
+
+                    {% for icon, label, value in info_items %}
+                    <div style="display: flex;
+                                align-items: flex-start;
+                                justify-content: space-between;
+                                gap: 0.5rem;
+                                font-size: 0.8125rem;">
+                        <span style="color: var(--gray-500);
+                                     flex-shrink: 0;
+                                     display: flex;
+                                     align-items: center;
+                                     gap: 0.375rem;">
+                            {{ icon }} {{ label }}
+                        </span>
+                        <span style="font-weight: 600;
+                                     color: var(--gray-800);
+                                     text-align: right;">
+                            {{ value }}
+                        </span>
+                    </div>
+                    {% endfor %}
+
+                    {# Time remaining #}
+                    {% if assignment.due_date %}
+                    <div style="padding: 0.625rem 0.75rem;
+                                background:
+                                {% if assignment.is_past_due() %}var(--red-ghost)
+                                {% elif assignment.get_days_until_due() is not none
+                                       and assignment.get_days_until_due() <= 3 %}
+                                    var(--orange-ghost)
+                                {% else %}var(--green-ghost){% endif %};
+                                border-radius: 0.625rem;
+                                font-size: 0.8rem;
+                                font-weight: 700;
+                                color:
+                                {% if assignment.is_past_due() %}var(--red-dark)
+                                {% elif assignment.get_days_until_due() is not none
+                                       and assignment.get_days_until_due() <= 3 %}
+                                    var(--orange-dark)
+                                {% else %}var(--green-dark){% endif %};
+                                text-align: center;">
+                        ⏰ {{ assignment.get_time_remaining_display() }}
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+
+        </div>
+
+
+        {# ── Submission History ── #}
+        {% if submission_history %}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title"
+                    style="font-size: 0.9rem;">
+                    📜 Submission History
+                </h2>
+                <span class="badge badge-light badge-sm">
+                    {{ submission_history | length }}
+                </span>
+            </div>
+
+            <div style="max-height: 300px; overflow-y: auto;">
+
+                {% for sub in submission_history %}
+                <a href="{{ url_for('learner.view_submission',
+                                   submission_id=sub.id) }}"
+                   style="display: flex;
+                          align-items: center;
+                          gap: 0.75rem;
+                          padding: 0.75rem 1rem;
+                          border-bottom: 1px solid var(--gray-100);
+                          text-decoration: none;
+                          color: inherit;
+                          transition: background 0.15s;
+                          {% if viewing_submission and
+                                viewing_submission.id == sub.id %}
+                              background: var(--green-ghost);
+                              border-left: 3px solid var(--green-dark);
+                          {% endif %}">
+
+                    <div style="width: 32px;
+                                height: 32px;
+                                border-radius: 50%;
+                                background:
+                                    {% if sub.is_graded %}var(--green-mid)
+                                    {% elif sub.is_late %}var(--orange-mid)
+                                    {% else %}var(--blue-mid){% endif %};
+                                color: white;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 0.75rem;
+                                font-weight: 700;
+                                flex-shrink: 0;">
+                        {{ sub.attempt_number }}
+                    </div>
+
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 0.8rem;
+                                    font-weight: 600;
+                                    color: var(--gray-800);">
+                            Attempt {{ sub.attempt_number }}
+                            {% if sub.is_late %}
+                            <span class="badge badge-orange badge-sm">
+                                Late
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div style="font-size: 0.7rem;
+                                    color: var(--gray-400);">
+                            {{ sub.date_submitted | dateformat('%d %b %Y') }}
+                        </div>
+                    </div>
+
+                    <div style="font-size: 0.75rem;
+                                font-weight: 700;
+                                flex-shrink: 0;
+                                text-align: right;">
+                        {% if sub.is_graded %}
+                        <span style="color: {% if (sub.score_percent or 0) >= 70 %}
+                                var(--green-dark)
+                            {% elif (sub.score_percent or 0) >= 50 %}
+                                var(--gold-dark)
+                            {% else %}
+                                var(--red-dark)
+                            {% endif %};">
+                            {{ sub.get_score_display() }}
+                        </span>
+                        {% else %}
+                        <span style="color: var(--gray-400);">
+                            Pending
+                        </span>
+                        {% endif %}
+                    </div>
+
+                </a>
+                {% endfor %}
+
+            </div>
+
+        </div>
+        {% endif %}
+        {# end submission history #}
+
+
+        {# ── Back Button ── #}
+        <a href="{{ url_for('learner.assignments') }}"
+           class="btn btn-light btn-block">
+            ← Back to Assignments
+        </a>
+
+
+    </div>
+    {# end right sidebar #}
+
+
+</div>
+{# end main layout #}
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+'use strict';
+
+/* =============================================================
+   Submission Form — Scripts
+   ============================================================= */
+
+/* ── Responsive layout ───────────────────────────────────── */
+(function() {
+    const layout = document.getElementById('submitLayout');
+    if (!layout) return;
+    function adjust() {
+        layout.style.gridTemplateColumns =
+            window.innerWidth <= 991 ? '1fr' : '1fr 340px';
+    }
+    adjust();
+    window.addEventListener('resize', adjust);
+})();
+
+
+/* ── Form submit loading state ───────────────────────────── */
+(function() {
+    const form    = document.getElementById('submissionForm');
+    const btn     = document.getElementById('submitBtn');
+    const btnText = document.getElementById('submitBtnText');
+
+    if (!form || !btn) return;
+
+    form.addEventListener('submit', function(e) {
+        /* Client-side validation */
+        const text = document.getElementById('text_content');
+        const file = document.getElementById('submissionFile');
+
+        const hasText = text && text.value.trim().length > 0;
+        const hasFile = file && file.files && file.files.length > 0;
+
+        if (!hasText && !hasFile) {
+            e.preventDefault();
+            showToast(
+                'Please type an answer or upload a file before submitting.',
+                'danger'
+            );
+            return;
+        }
+
+        btn.disabled     = true;
+        btn.classList.add('loading');
+        if (btnText) btnText.textContent = 'Submitting...';
+    });
+})();
+
+
+/* ── Auto-save draft text to localStorage ────────────────── */
+(function() {
+    const textarea = document.getElementById('text_content');
+    if (!textarea) return;
+
+    const draftKey = 'agrilms_draft_{{ assignment.id }}';
+
+    /* Restore draft */
+    const saved = localStorage.getItem(draftKey);
+    if (saved && !textarea.value) {
+        textarea.value = saved;
+    }
+
+    /* Save draft as user types */
+    textarea.addEventListener('input', debounce(function() {
+        localStorage.setItem(draftKey, textarea.value);
+    }, 1500));
+
+    /* Clear draft on successful submit */
+    const form = document.getElementById('submissionForm');
+    if (form) {
+        form.addEventListener('submit', function() {
+            localStorage.removeItem(draftKey);
+        });
+    }
+})();
+
+</script>
+{% endblock %}

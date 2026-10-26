@@ -1,0 +1,857 @@
+{% extends 'base.html' %}
+
+{# ============================================================
+   Agri LMS — Course Detail Page
+   ============================================================
+   File    : app/templates/learner/course_detail.html
+   Purpose : Full course information page showing:
+               - Course hero with title, description, meta
+               - Enrollment button or Continue Learning
+               - Learning outcomes list
+               - Module list with completion status
+               - Assignment list
+               - Course statistics
+   ============================================================ #}
+
+{% block title %}{{ course.title }}{% endblock %}
+
+{% block content %}
+
+{# ── Course Hero ───────────────────────────────────────────── #}
+<div class="course-hero" style="margin-bottom: 2rem;">
+
+    <div class="course-hero-content">
+
+        {# Category label #}
+        <div class="course-hero-category">
+            {{ course.category or 'Agriculture' }}
+        </div>
+
+        {# Course title #}
+        <h1 class="course-hero-title">
+            {{ course.title }}
+        </h1>
+
+        {# Course description #}
+        <p class="course-hero-description">
+            {{ course.short_description }}
+        </p>
+
+        {# Course meta row #}
+        <div class="course-hero-meta">
+
+            <div class="course-hero-meta-item">
+                <span>📖</span>
+                <span>
+                    {{ modules | length }}
+                    Module{{ 's' if modules | length != 1 }}
+                </span>
+            </div>
+
+            {% if course.duration_weeks %}
+            <div class="course-hero-meta-item">
+                <span>⏱️</span>
+                <span>{{ course.duration_weeks }} Weeks</span>
+            </div>
+            {% endif %}
+
+            <div class="course-hero-meta-item">
+                <span>📊</span>
+                <span>
+                    {{ course.level | capitalize if course.level else 'Beginner' }}
+                </span>
+            </div>
+
+            <div class="course-hero-meta-item">
+                <span>👥</span>
+                <span>{{ total_enrolled }} Enrolled</span>
+            </div>
+
+            {% if course.certificate_available %}
+            <div class="course-hero-meta-item">
+                <span>🏆</span>
+                <span>Certificate on Completion</span>
+            </div>
+            {% endif %}
+
+            {% if course.language %}
+            <div class="course-hero-meta-item">
+                <span>🌐</span>
+                <span>{{ course.language }}</span>
+            </div>
+            {% endif %}
+
+        </div>
+
+        {# Hero action buttons #}
+        <div class="course-hero-actions">
+
+            {% if current_user.is_authenticated %}
+
+                {% if current_user.is_admin() %}
+                    {# Admin view — management actions #}
+                    <a href="{{ url_for('admin.courses') }}"
+                       class="btn btn-secondary btn-lg">
+                        🛡️ Manage in Admin
+                    </a>
+
+                {% elif is_enrolled %}
+
+                    {% if enrollment and enrollment.is_completed %}
+                        {# Completed — review or certificate #}
+                        <span class="btn btn-secondary btn-lg"
+                              style="cursor: default;">
+                            ✅ Course Completed
+                        </span>
+                        {% if enrollment.certificate_issued %}
+                        <a href="#"
+                           class="btn btn-lg"
+                           style="background: rgba(255,255,255,0.15);
+                                  color: white;
+                                  border: 2px solid rgba(255,255,255,0.3);">
+                            🏆 View Certificate
+                        </a>
+                        {% endif %}
+
+                    {% else %}
+                        {# Active enrollment — continue learning #}
+                        {% if resume_module_id %}
+                        <a href="{{ url_for('courses.module_view',
+                                           course_id=course.id,
+                                           module_id=resume_module_id) }}"
+                           class="btn btn-secondary btn-lg">
+                            ▶ Continue Learning
+                        </a>
+                        {% elif modules %}
+                        <a href="{{ url_for('courses.module_view',
+                                           course_id=course.id,
+                                           module_id=modules[0].id) }}"
+                           class="btn btn-secondary btn-lg">
+                            ▶ Start Learning
+                        </a>
+                        {% endif %}
+
+                        {# Unenroll option #}
+                        <form method="POST"
+                              action="{{ url_for('courses.unenroll',
+                                               course_id=course.id) }}"
+                              style="display: inline;"
+                              onsubmit="return confirm(
+                                  'Are you sure you want to unenroll from this course? ' +
+                                  'Your progress will be saved.');">
+                            <input type="hidden"
+                                   name="csrf_token"
+                                   value="{{ csrf_token() }}">
+                            <button type="submit"
+                                    class="btn btn-lg"
+                                    style="background: rgba(255,255,255,0.1);
+                                           color: rgba(255,255,255,0.8);
+                                           border: 2px solid rgba(255,255,255,0.2);">
+                                Leave Course
+                            </button>
+                        </form>
+                    {% endif %}
+
+                {% elif enrollment and enrollment.is_pending() %}
+                    {# Pending approval #}
+                    <span class="btn btn-lg"
+                          style="background: rgba(245,159,0,0.25);
+                                 color: var(--gold-light);
+                                 border: 2px solid rgba(245,159,0,0.4);
+                                 cursor: default;">
+                        ⏳ Enrollment Pending Approval
+                    </span>
+
+                {% elif course.is_enrollment_available() %}
+                    {# Not enrolled — show enroll button #}
+                    <form method="POST"
+                          action="{{ url_for('courses.enroll',
+                                           course_id=course.id) }}">
+                        <input type="hidden"
+                               name="csrf_token"
+                               value="{{ csrf_token() }}">
+                        <button type="submit"
+                                class="btn btn-secondary btn-lg">
+                            🌱 Enroll in This Course
+                        </button>
+                    </form>
+
+                {% else %}
+                    <span class="btn btn-lg"
+                          style="background: rgba(255,255,255,0.1);
+                                 color: rgba(255,255,255,0.6);
+                                 border: 2px solid rgba(255,255,255,0.15);
+                                 cursor: default;">
+                        Enrollment Closed
+                    </span>
+                {% endif %}
+
+            {% else %}
+                {# Not logged in #}
+                <a href="{{ url_for('auth.register') }}"
+                   class="btn btn-secondary btn-lg">
+                    🌱 Register to Enroll
+                </a>
+                <a href="{{ url_for('auth.login') }}"
+                   class="btn btn-lg"
+                   style="background: rgba(255,255,255,0.12);
+                          color: white;
+                          border: 2px solid rgba(255,255,255,0.25);">
+                    🔑 Log In
+                </a>
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+{# end course hero #}
+
+
+{# ── Enrollment Stats Bar ──────────────────────────────────── #}
+<div class="enrollment-bar" style="margin-bottom: 2rem;">
+
+    <div class="enrollment-bar-stat">
+        <div class="enrollment-bar-value">
+            {{ modules | length }}
+        </div>
+        <div class="enrollment-bar-label">Modules</div>
+    </div>
+
+    <div class="enrollment-bar-divider"></div>
+
+    <div class="enrollment-bar-stat">
+        <div class="enrollment-bar-value">
+            {{ assignments | length }}
+        </div>
+        <div class="enrollment-bar-label">Assignments</div>
+    </div>
+
+    <div class="enrollment-bar-divider"></div>
+
+    <div class="enrollment-bar-stat">
+        <div class="enrollment-bar-value">
+            {{ total_enrolled }}
+        </div>
+        <div class="enrollment-bar-label">Learners</div>
+    </div>
+
+    <div class="enrollment-bar-divider"></div>
+
+    <div class="enrollment-bar-stat">
+        <div class="enrollment-bar-value">
+            {{ completion_rate }}%
+        </div>
+        <div class="enrollment-bar-label">Completion Rate</div>
+    </div>
+
+    {% if course.passing_score %}
+    <div class="enrollment-bar-divider"></div>
+    <div class="enrollment-bar-stat">
+        <div class="enrollment-bar-value">
+            {{ course.passing_score | int }}%
+        </div>
+        <div class="enrollment-bar-label">Pass Mark</div>
+    </div>
+    {% endif %}
+
+    {# Enrollment status badge for learner #}
+    {% if is_enrolled and enrollment %}
+    <div style="margin-left: auto; flex-shrink: 0;">
+        <div style="text-align: center;">
+            <div style="font-size: 1.5rem;
+                        font-weight: 900;
+                        color: var(--green-dark);">
+                {{ enrollment.progress_percent | int }}%
+            </div>
+            <div style="font-size: 0.7rem;
+                        color: var(--gray-400);
+                        text-transform: uppercase;
+                        letter-spacing: 0.05em;">
+                Your Progress
+            </div>
+            <div class="progress progress-sm"
+                 style="width: 120px; margin-top: 4px;">
+                <div class="progress-bar bar-green"
+                     data-value="{{ enrollment.progress_percent or 0 }}"
+                     style="width: {{ enrollment.progress_percent or 0 }}%;">
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+
+{# ── Main Content Grid ─────────────────────────────────────── #}
+<div style="display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 1.5rem;
+            align-items: flex-start;"
+     id="detailGrid">
+
+    {# ══ LEFT COLUMN ══════════════════════════════════════════ #}
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+
+        {# ── What You Will Learn ── #}
+        {% if course.get_learning_outcomes_list() %}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    🎯 What You Will Learn
+                </h2>
+            </div>
+            <div class="card-body">
+                <div class="outcome-list"
+                     style="display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 0.75rem;">
+                    {% for outcome in course.get_learning_outcomes_list() %}
+                    <div class="outcome-item">
+                        <div class="outcome-check">✓</div>
+                        <span>{{ outcome }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+
+        {# ── Course Modules ── #}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    📖 Course Modules
+                </h2>
+                <span style="font-size: 0.8125rem;
+                             color: var(--gray-400);">
+                    {{ modules | length }}
+                    module{{ 's' if modules | length != 1 }}
+                </span>
+            </div>
+
+            <div class="card-body compact">
+
+                {% if modules %}
+
+                    <div style="display: flex;
+                                flex-direction: column;
+                                gap: 0.625rem;">
+
+                        {% for module in modules %}
+
+                        {# Determine module access and completion #}
+                        {% set is_completed = module.id in completed_modules %}
+                        {% set is_accessible = is_enrolled or
+                                               module.is_free_preview or
+                                               (current_user.is_authenticated
+                                               and current_user.is_admin()) %}
+
+                        <div class="module-card
+                            {% if is_completed %}completed{% endif %}
+                            {% if not is_accessible %}locked{% endif %}"
+                             style="{% if not is_accessible %}
+                                        opacity: 0.6;
+                                        cursor: default;
+                                    {% endif %}">
+
+                            {# Module number / completion indicator #}
+                            <div class="module-card-number">
+                                {% if is_completed %}
+                                    ✓
+                                {% else %}
+                                    {{ module.order_number }}
+                                {% endif %}
+                            </div>
+
+                            {# Module info #}
+                            <div class="module-card-info">
+
+                                <div class="module-card-title">
+                                    {{ module.get_module_label() }}
+                                </div>
+
+                                <div class="module-card-meta">
+
+                                    {% if module.get_video_count() > 0 %}
+                                    <span>
+                                        🎬 {{ module.get_video_count() }} video
+                                        {{ 's' if module.get_video_count() != 1 }}
+                                    </span>
+                                    {% endif %}
+
+                                    {% if module.get_pdf_count() > 0 %}
+                                    <span>
+                                        📄 {{ module.get_pdf_count() }} PDF
+                                        {{ 's' if module.get_pdf_count() != 1 }}
+                                    </span>
+                                    {% endif %}
+
+                                    {% if module.duration_minutes %}
+                                    <span>
+                                        ⏱️ {{ module.get_duration_display() }}
+                                    </span>
+                                    {% endif %}
+
+                                    {% if module.is_last_module %}
+                                    <span class="badge badge-gold badge-sm">
+                                        Final Module
+                                    </span>
+                                    {% endif %}
+
+                                    {% if module.is_free_preview and not is_enrolled %}
+                                    <span class="badge badge-green badge-sm">
+                                        Free Preview
+                                    </span>
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+                            {# Module status / action #}
+                            <div class="module-card-status">
+                                {% if is_completed %}
+                                    <span style="color: var(--green-mid);"
+                                          title="Completed">
+                                        ✅
+                                    </span>
+                                {% elif is_accessible %}
+                                    <a href="{{ url_for('courses.module_view',
+                                                       course_id=course.id,
+                                                       module_id=module.id) }}"
+                                       class="btn btn-primary btn-xs"
+                                       aria-label="Open {{ module.title }}">
+                                        Open →
+                                    </a>
+                                {% else %}
+                                    <span style="color: var(--gray-300);"
+                                          title="Enroll to access">
+                                        🔒
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                        </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <div class="empty-state"
+                         style="min-height: 150px; padding: 2rem 1rem;">
+                        <span style="font-size: 2.5rem;">📖</span>
+                        <p class="empty-state-text"
+                           style="margin-top: 0.75rem;">
+                            No modules have been published yet.
+                            Check back soon.
+                        </p>
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+        {# end modules card #}
+
+
+        {# ── Assignments ── #}
+        {% if assignments %}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    📝 Assignments
+                </h2>
+                <span style="font-size: 0.8125rem; color: var(--gray-400);">
+                    {{ assignments | length }}
+                    assignment{{ 's' if assignments | length != 1 }}
+                </span>
+            </div>
+
+            <div class="card-body compact">
+                <div style="display: flex;
+                            flex-direction: column;
+                            gap: 0.75rem;">
+
+                    {% for assignment in assignments %}
+                    <div style="display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                gap: 1rem;
+                                padding: 0.875rem 1rem;
+                                background: var(--gray-50);
+                                border: 1px solid var(--color-border);
+                                border-radius: 0.75rem;">
+
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 600;
+                                        font-size: 0.9rem;
+                                        color: var(--gray-800);
+                                        margin-bottom: 0.25rem;
+                                        white-space: nowrap;
+                                        overflow: hidden;
+                                        text-overflow: ellipsis;">
+                                📝 {{ assignment.title }}
+                            </div>
+                            <div style="display: flex;
+                                        align-items: center;
+                                        gap: 0.75rem;
+                                        font-size: 0.75rem;
+                                        color: var(--gray-500);">
+                                <span>{{ assignment.total_marks | int }} marks</span>
+                                <span>{{ assignment.get_submission_type_label() }}</span>
+                                {% if assignment.due_date %}
+                                <span class="assignment-deadline
+                                    {% if assignment.is_past_due() %}overdue
+                                    {% elif assignment.get_days_until_due() is not none
+                                           and assignment.get_days_until_due() <= 3 %}due-soon
+                                    {% endif %}">
+                                    📅 {{ assignment.get_due_date_display() }}
+                                </span>
+                                {% else %}
+                                <span>No deadline</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if is_enrolled %}
+                        <a href="{{ url_for('learner.assignments') }}"
+                           class="btn btn-primary btn-xs"
+                           style="flex-shrink: 0;">
+                            Submit →
+                        </a>
+                        {% else %}
+                        <span class="badge badge-light"
+                              style="flex-shrink: 0;">
+                            Enroll to access
+                        </span>
+                        {% endif %}
+
+                    </div>
+                    {% endfor %}
+
+                </div>
+            </div>
+
+        </div>
+        {% endif %}
+        {# end assignments #}
+
+
+        {# ── Full Course Description ── #}
+        {% if course.full_description %}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-header-title">📋 About This Course</h2>
+            </div>
+            <div class="card-body">
+                <div style="font-size: 0.9375rem;
+                            color: var(--gray-700);
+                            line-height: 1.7;">
+                    {{ course.full_description | replace('\n', '<br>') | safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+
+    </div>
+    {# end left column #}
+
+
+    {# ══ RIGHT COLUMN ═════════════════════════════════════════ #}
+    <div style="display: flex;
+                flex-direction: column;
+                gap: 1.25rem;
+                position: sticky;
+                top: calc(var(--navbar-height) + 1rem);">
+
+
+        {# ── Enrollment Action Card ── #}
+        <div class="card">
+
+            <div style="padding: 1.5rem;
+                        text-align: center;
+                        border-bottom: 1px solid var(--color-border);
+                        background: var(--green-ghost);">
+
+                {# Enrollment status or CTA #}
+                {% if current_user.is_authenticated and is_enrolled %}
+
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">
+                        {% if enrollment and enrollment.is_completed %}🏆
+                        {% else %}📚{% endif %}
+                    </div>
+
+                    <div style="font-size: 1rem;
+                                font-weight: 700;
+                                color: var(--green-dark);
+                                margin-bottom: 0.375rem;">
+                        {% if enrollment and enrollment.is_completed %}
+                            Course Completed!
+                        {% else %}
+                            Currently Enrolled
+                        {% endif %}
+                    </div>
+
+                    {% if enrollment %}
+                    <div style="font-size: 2rem;
+                                font-weight: 900;
+                                color: var(--green-darkest);
+                                line-height: 1;">
+                        {{ enrollment.progress_percent | int }}%
+                    </div>
+                    <div style="font-size: 0.75rem;
+                                color: var(--gray-500);
+                                margin-bottom: 0.875rem;">
+                        Complete
+                    </div>
+                    <div class="progress progress-sm"
+                         style="margin-bottom: 1rem;">
+                        <div class="progress-bar bar-gradient-green"
+                             data-value="{{ enrollment.progress_percent or 0 }}"
+                             style="width: {{ enrollment.progress_percent or 0 }}%;">
+                        </div>
+                    </div>
+                    {% endif %}
+
+                {% else %}
+
+                    <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">
+                        🌱
+                    </div>
+                    <div style="font-size: 0.875rem;
+                                color: var(--gray-600);
+                                margin-bottom: 1rem;
+                                line-height: 1.5;">
+                        Enroll now to access all modules,
+                        materials, and assignments.
+                    </div>
+
+                {% endif %}
+
+                {# Primary CTA button #}
+                {% if current_user.is_authenticated %}
+
+                    {% if is_enrolled and not enrollment.is_completed %}
+                        {% if resume_module_id %}
+                        <a href="{{ url_for('courses.module_view',
+                                           course_id=course.id,
+                                           module_id=resume_module_id) }}"
+                           class="btn btn-primary btn-block">
+                            ▶ Continue Learning
+                        </a>
+                        {% elif modules %}
+                        <a href="{{ url_for('courses.module_view',
+                                           course_id=course.id,
+                                           module_id=modules[0].id) }}"
+                           class="btn btn-primary btn-block">
+                            ▶ Start Learning
+                        </a>
+                        {% endif %}
+
+                    {% elif not is_enrolled and course.is_enrollment_available() and current_user.is_learner() %}
+                        <form method="POST"
+                              action="{{ url_for('courses.enroll',
+                                               course_id=course.id) }}">
+                            <input type="hidden"
+                                   name="csrf_token"
+                                   value="{{ csrf_token() }}">
+                            <button type="submit"
+                                    class="btn btn-primary btn-block btn-lg">
+                                🌱 Enroll Now — Free
+                            </button>
+                        </form>
+
+                    {% endif %}
+
+                {% else %}
+                    <a href="{{ url_for('auth.register') }}"
+                       class="btn btn-primary btn-block btn-lg">
+                        🌱 Register to Enroll
+                    </a>
+                    <a href="{{ url_for('auth.login') }}"
+                       class="btn btn-outline-primary btn-block"
+                       style="margin-top: 0.5rem;">
+                        Already registered? Log In
+                    </a>
+                {% endif %}
+
+            </div>
+
+            {# Course quick facts #}
+            <div style="padding: 1.25rem;">
+                <div style="font-size: 0.75rem;
+                            font-weight: 700;
+                            color: var(--gray-400);
+                            text-transform: uppercase;
+                            letter-spacing: 0.07em;
+                            margin-bottom: 0.875rem;">
+                    Course Details
+                </div>
+
+                {% set details = [
+                    ('📊', 'Level',
+                     course.level | capitalize if course.level else 'Beginner'),
+                    ('📖', 'Modules',
+                     (modules | length) ~ ' module' ~
+                     ('s' if modules | length != 1 else '')),
+                    ('📝', 'Assignments',
+                     (assignments | length) ~ ' assignment' ~
+                     ('s' if assignments | length != 1 else '')),
+                    ('⏱️', 'Duration',
+                     (course.duration_weeks ~ ' weeks') if course.duration_weeks else 'Self-paced'),
+                    ('🌐', 'Language',
+                     course.language or 'English'),
+                    ('🏆', 'Certificate',
+                     'Yes, on completion' if course.certificate_available else 'No'),
+                ] %}
+
+                <div style="display: flex;
+                            flex-direction: column;
+                            gap: 0.625rem;">
+                    {% for icon, label, value in details %}
+                    <div style="display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                font-size: 0.8125rem;">
+                        <span style="color: var(--gray-500);
+                                     display: flex;
+                                     align-items: center;
+                                     gap: 0.375rem;">
+                            {{ icon }} {{ label }}
+                        </span>
+                        <span style="font-weight: 600;
+                                     color: var(--gray-800);">
+                            {{ value }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+
+        </div>
+        {# end enrollment card #}
+
+
+        {# ── Prerequisites ── #}
+        {% if course.prerequisites %}
+        <div class="card">
+            <div class="card-body compact">
+                <div style="font-weight: 700;
+                            color: var(--gray-800);
+                            font-size: 0.9rem;
+                            margin-bottom: 0.625rem;
+                            display: flex;
+                            align-items: center;
+                            gap: 0.375rem;">
+                    📋 Prerequisites
+                </div>
+                <p style="font-size: 0.8125rem;
+                           color: var(--gray-600);
+                           line-height: 1.6;
+                           margin: 0;">
+                    {{ course.prerequisites }}
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+
+        {# ── Tags ── #}
+        {% if course.get_tags_list() %}
+        <div class="card">
+            <div class="card-body compact">
+                <div style="font-weight: 700;
+                            color: var(--gray-800);
+                            font-size: 0.9rem;
+                            margin-bottom: 0.625rem;">
+                    🏷️ Topics
+                </div>
+                <div class="tags-container">
+                    {% for tag in course.get_tags_list() %}
+                    <a href="{{ url_for('courses.catalog',
+                                       search=tag) }}"
+                       class="tag clickable">
+                        {{ tag }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+
+        {# ── Back to Catalog ── #}
+        <a href="{{ url_for('courses.catalog') }}"
+           class="btn btn-light btn-block">
+            ← Back to Catalog
+        </a>
+
+
+    </div>
+    {# end right column #}
+
+</div>
+{# end detail grid #}
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+'use strict';
+
+/* =============================================================
+   Course Detail — Scripts
+   ============================================================= */
+
+/* ── Responsive grid ─────────────────────────────────────── */
+(function() {
+    const grid = document.getElementById('detailGrid');
+    if (!grid) return;
+
+    function adjust() {
+        if (window.innerWidth <= 991) {
+            grid.style.gridTemplateColumns = '1fr';
+            /* Move right column before left on mobile */
+        } else {
+            grid.style.gridTemplateColumns = '1fr 340px';
+        }
+    }
+
+    adjust();
+    window.addEventListener('resize', adjust);
+})();
+
+
+/* ── Module card hover ───────────────────────────────────── */
+document.querySelectorAll('.module-card:not(.locked)').forEach(
+    function(card) {
+        card.addEventListener('mouseenter', function() {
+            this.style.borderColor = 'var(--green-light)';
+            this.style.background  = 'var(--green-ghost)';
+            this.style.transform   = 'translateX(4px)';
+        });
+        card.addEventListener('mouseleave', function() {
+            if (!this.classList.contains('completed')) {
+                this.style.borderColor = '';
+                this.style.background  = '';
+            }
+            this.style.transform = '';
+        });
+    }
+);
+
+</script>
+{% endblock %}

@@ -1,0 +1,497 @@
+{% extends 'base.html' %}
+
+{# ============================================================
+   Agri LMS — Learner Assignments Page
+   ============================================================
+   File    : app/templates/learner/assignments.html
+   Purpose : Lists all assignments for enrolled courses grouped
+             into Pending, Submitted, and Graded tabs.
+   ============================================================ #}
+
+{% block title %}My Assignments{% endblock %}
+
+{% block content %}
+
+{# ── Page Header ───────────────────────────────────────────── #}
+<div style="margin-bottom: 2rem;">
+    <div class="page-title">
+        <span class="title-icon">📝</span>
+        My Assignments
+    </div>
+    <p class="page-subtitle">
+        All assignments from your enrolled courses.
+        Submit your work and track your grading feedback here.
+    </p>
+</div>
+
+
+{# ── Summary Stats ─────────────────────────────────────────── #}
+<div class="dashboard-grid cols-4"
+     style="margin-bottom: 2rem;">
+
+    <div class="stat-card stat-blue">
+        <div class="stat-card-icon">📋</div>
+        <div class="stat-card-content">
+            <div class="stat-card-value">{{ total_count }}</div>
+            <div class="stat-card-label">Total Assignments</div>
+        </div>
+    </div>
+
+    <div class="stat-card stat-orange">
+        <div class="stat-card-icon">⏳</div>
+        <div class="stat-card-content">
+            <div class="stat-card-value">
+                {{ pending_assignments | length }}
+            </div>
+            <div class="stat-card-label">Pending Submission</div>
+        </div>
+    </div>
+
+    <div class="stat-card stat-gold">
+        <div class="stat-card-icon">📤</div>
+        <div class="stat-card-content">
+            <div class="stat-card-value">
+                {{ submitted_assignments | length }}
+            </div>
+            <div class="stat-card-label">Awaiting Grade</div>
+        </div>
+    </div>
+
+    <div class="stat-card stat-green">
+        <div class="stat-card-icon">✅</div>
+        <div class="stat-card-content">
+            <div class="stat-card-value">
+                {{ graded_assignments | length }}
+            </div>
+            <div class="stat-card-label">Graded</div>
+        </div>
+    </div>
+
+</div>
+
+
+{# ── Tab Navigation ────────────────────────────────────────── #}
+<div style="display: flex;
+            gap: 0.375rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--color-border);
+            padding-bottom: 0;">
+
+    {% set tabs = [
+        ('all',       'All Assignments',   total_count,
+         all_assignments | length),
+        ('pending',   'Pending',           pending_assignments | length,
+         pending_assignments | length),
+        ('submitted', 'Awaiting Grade',    submitted_assignments | length,
+         submitted_assignments | length),
+        ('graded',    'Graded',            graded_assignments | length,
+         graded_assignments | length),
+    ] %}
+
+    {% for tab_id, tab_label, tab_count, _ in tabs %}
+    <button class="tab-btn"
+            data-tab="{{ tab_id }}"
+            id="tab-{{ tab_id }}"
+            style="padding: 0.625rem 1.25rem;
+                   border: none;
+                   background: none;
+                   font-size: 0.875rem;
+                   font-weight: 600;
+                   cursor: pointer;
+                   border-bottom: 3px solid transparent;
+                   margin-bottom: -2px;
+                   color: var(--gray-500);
+                   transition: all 0.2s;
+                   display: flex;
+                   align-items: center;
+                   gap: 0.5rem;">
+        {{ tab_label }}
+        <span style="background: var(--gray-100);
+                     color: var(--gray-600);
+                     font-size: 0.7rem;
+                     padding: 1px 7px;
+                     border-radius: 999px;
+                     font-weight: 700;">
+            {{ tab_count }}
+        </span>
+    </button>
+    {% endfor %}
+
+</div>
+
+
+{# ── Assignment Panels ─────────────────────────────────────── #}
+
+{# Helper macro for rendering a single assignment card #}
+{% macro render_assignment_card(assignment, submission) %}
+
+<div class="assignment-card"
+     data-status="{% if submission %}{% if submission.is_graded %}graded
+                  {% else %}submitted{% endif %}{% else %}pending{% endif %}">
+
+    <div class="assignment-card-header">
+
+        <div style="flex: 1; min-width: 0;">
+
+            <div style="display: flex;
+                        align-items: center;
+                        gap: 0.625rem;
+                        flex-wrap: wrap;
+                        margin-bottom: 0.375rem;">
+
+                <h3 class="assignment-card-title">
+                    {{ assignment.title }}
+                </h3>
+
+                {# Submission status badge #}
+                {% if submission %}
+                    {% if submission.is_graded %}
+                    <span class="badge badge-success">✅ Graded</span>
+                    {% else %}
+                    <span class="badge badge-gold">📤 Submitted</span>
+                    {% endif %}
+                {% else %}
+                    {% if assignment.is_past_due() %}
+                    <span class="badge badge-danger">⚠️ Overdue</span>
+                    {% else %}
+                    <span class="badge badge-blue">⏳ Pending</span>
+                    {% endif %}
+                {% endif %}
+
+                {# Late badge #}
+                {% if submission and submission.is_late %}
+                <span class="badge badge-orange">🕐 Late</span>
+                {% endif %}
+
+            </div>
+
+            <div class="assignment-card-meta">
+
+                <span>📚 {{ assignment.course.title
+                            if assignment.course else 'Course' }}</span>
+
+                <span>
+                    {{ assignment.get_submission_type_label() }}
+                </span>
+
+                <span>
+                    🎯 {{ assignment.total_marks | int }} marks
+                </span>
+
+                {% if assignment.due_date %}
+                <span class="assignment-deadline
+                    {% if assignment.is_past_due() and not submission %}overdue
+                    {% elif assignment.get_days_until_due() is not none
+                           and assignment.get_days_until_due() <= 3
+                           and not submission %}due-soon{% endif %}">
+                    📅 {{ assignment.get_due_date_display() }}
+                </span>
+                {% else %}
+                <span class="assignment-deadline no-deadline">
+                    No deadline
+                </span>
+                {% endif %}
+
+                {% if submission %}
+                <span style="color: var(--gray-400);">
+                    Attempt {{ submission.attempt_number }}
+                </span>
+                {% endif %}
+
+            </div>
+
+        </div>
+
+        {# Action button #}
+        <div style="flex-shrink: 0;">
+            {% if submission and submission.is_graded %}
+            <a href="{{ url_for('learner.view_submission',
+                               submission_id=submission.id) }}"
+               class="btn btn-outline-primary btn-sm">
+                View Feedback
+            </a>
+            {% elif submission %}
+            <a href="{{ url_for('learner.submit_assignment',
+                               assignment_id=assignment.id) }}"
+               class="btn btn-light btn-sm">
+                View Submission
+            </a>
+            {% elif assignment.can_learner_submit(current_user.id) %}
+            <a href="{{ url_for('learner.submit_assignment',
+                               assignment_id=assignment.id) }}"
+               class="btn btn-primary btn-sm">
+                Submit Now →
+            </a>
+            {% else %}
+            <span class="badge badge-secondary">
+                Closed
+            </span>
+            {% endif %}
+        </div>
+
+    </div>
+
+    {# Assignment description preview #}
+    <div class="card-body compact">
+
+        <p class="assignment-card-description">
+            {{ assignment.description | truncate_words(30) }}
+        </p>
+
+        {# Grade result if graded #}
+        {% if submission and submission.is_graded and submission.grade %}
+        <div style="display: flex;
+                    align-items: center;
+                    gap: 1.5rem;
+                    padding: 0.875rem 1rem;
+                    background: var(--green-ghost);
+                    border: 1px solid var(--green-pale);
+                    border-radius: 0.75rem;
+                    margin-top: 0.75rem;
+                    flex-wrap: wrap;">
+
+            {# Score display #}
+            <div style="text-align: center; flex-shrink: 0;">
+                <div style="font-size: 1.75rem;
+                            font-weight: 900;
+                            color: {% if (submission.score_percent or 0) >= 70 %}
+                                var(--green-dark)
+                            {% elif (submission.score_percent or 0) >= 50 %}
+                                var(--gold-dark)
+                            {% else %}
+                                var(--red-dark)
+                            {% endif %};">
+                    {{ submission.get_score_display() }}
+                </div>
+                <div style="font-size: 0.7rem;
+                            color: var(--gray-400);
+                            text-transform: uppercase;
+                            letter-spacing: 0.05em;">
+                    Score
+                </div>
+            </div>
+
+            {# Grade letter #}
+            <div class="grade-badge
+                {{ submission.grade.get_grade_letter() }}"
+                 style="flex-shrink: 0;">
+                {{ submission.grade.get_grade_letter() }}
+            </div>
+
+            {# Grade label and feedback preview #}
+            <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 700;
+                            color: var(--gray-800);
+                            font-size: 0.875rem;
+                            margin-bottom: 0.25rem;">
+                    {{ submission.grade.get_grade_label() }}
+                    — {{ submission.get_score_display() }}
+                </div>
+                {% if submission.grade.feedback %}
+                <div style="font-size: 0.8125rem;
+                            color: var(--gray-600);
+                            line-height: 1.5;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;">
+                    💬 {{ submission.grade.feedback | truncate_words(15) }}
+                </div>
+                {% endif %}
+            </div>
+
+            <a href="{{ url_for('learner.view_submission',
+                               submission_id=submission.id) }}"
+               class="btn btn-primary btn-sm"
+               style="flex-shrink: 0;">
+                Full Feedback
+            </a>
+
+        </div>
+        {% endif %}
+
+        {# Time remaining for pending assignments #}
+        {% if not submission and assignment.due_date %}
+        <div style="margin-top: 0.75rem;
+                    font-size: 0.8125rem;
+                    color: {% if assignment.is_past_due() %}var(--red-mid)
+                           {% elif assignment.get_days_until_due() is not none
+                                  and assignment.get_days_until_due() <= 3 %}var(--orange-mid)
+                           {% else %}var(--gray-500){% endif %};
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.375rem;">
+            ⏰ {{ assignment.get_time_remaining_display() }}
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endmacro %}
+
+
+{# ── Tab Content Panels ────────────────────────────────────── #}
+
+{# ALL ASSIGNMENTS #}
+<div id="panel-all" class="tab-panel">
+    {% if all_assignments %}
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            {% for assignment in all_assignments %}
+                {{ render_assignment_card(
+                    assignment,
+                    submissions_map.get(assignment.id)
+                ) }}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <span class="empty-state-illustration">📝</span>
+            <h2 class="empty-state-title">No Assignments Yet</h2>
+            <p class="empty-state-text">
+                Assignments will appear here once your instructor
+                publishes them for your enrolled courses.
+            </p>
+            <a href="{{ url_for('courses.catalog') }}"
+               class="btn btn-primary">
+                Browse Courses
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+{# PENDING ASSIGNMENTS #}
+<div id="panel-pending" class="tab-panel" style="display: none;">
+    {% if pending_assignments %}
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            {% for assignment in pending_assignments %}
+                {{ render_assignment_card(assignment, None) }}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state" style="min-height: 200px;">
+            <span class="empty-state-illustration">✅</span>
+            <h2 class="empty-state-title">All Done!</h2>
+            <p class="empty-state-text">
+                You have submitted all your assignments.
+                Great work!
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+{# SUBMITTED ASSIGNMENTS #}
+<div id="panel-submitted" class="tab-panel" style="display: none;">
+    {% if submitted_assignments %}
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            {% for assignment in submitted_assignments %}
+                {{ render_assignment_card(
+                    assignment,
+                    submissions_map.get(assignment.id)
+                ) }}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state" style="min-height: 200px;">
+            <span class="empty-state-illustration">📬</span>
+            <h2 class="empty-state-title">No Pending Grades</h2>
+            <p class="empty-state-text">
+                None of your submissions are currently
+                awaiting grading.
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+{# GRADED ASSIGNMENTS #}
+<div id="panel-graded" class="tab-panel" style="display: none;">
+    {% if graded_assignments %}
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            {% for assignment in graded_assignments %}
+                {{ render_assignment_card(
+                    assignment,
+                    submissions_map.get(assignment.id)
+                ) }}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state" style="min-height: 200px;">
+            <span class="empty-state-illustration">🎓</span>
+            <h2 class="empty-state-title">No Grades Yet</h2>
+            <p class="empty-state-text">
+                Your graded assignments will appear here
+                after your instructor reviews your work.
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+'use strict';
+
+/* =============================================================
+   Assignment List — Tab Navigation
+   ============================================================= */
+
+const ACTIVE_TAB_STYLE = {
+    color:        'var(--green-dark)',
+    borderColor:  'var(--green-dark)',
+};
+
+const INACTIVE_TAB_STYLE = {
+    color:        'var(--gray-500)',
+    borderColor:  'transparent',
+};
+
+function activateTab(tabId) {
+    /* Hide all panels */
+    document.querySelectorAll('.tab-panel').forEach(function(panel) {
+        panel.style.display = 'none';
+    });
+
+    /* Reset all tab buttons */
+    document.querySelectorAll('.tab-btn').forEach(function(btn) {
+        btn.style.color             = INACTIVE_TAB_STYLE.color;
+        btn.style.borderBottomColor = INACTIVE_TAB_STYLE.borderColor;
+    });
+
+    /* Show selected panel */
+    const panel = document.getElementById('panel-' + tabId);
+    if (panel) panel.style.display = 'block';
+
+    /* Activate selected tab button */
+    const btn = document.getElementById('tab-' + tabId);
+    if (btn) {
+        btn.style.color             = ACTIVE_TAB_STYLE.color;
+        btn.style.borderBottomColor = ACTIVE_TAB_STYLE.borderColor;
+
+        /* Update count badge color */
+        const badge = btn.querySelector('span');
+        if (badge) {
+            badge.style.background = 'var(--green-ghost)';
+            badge.style.color      = 'var(--green-dark)';
+        }
+    }
+
+    /* Save to sessionStorage */
+    sessionStorage.setItem('agrilms_assignments_tab', tabId);
+}
+
+/* Attach click handlers */
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        activateTab(this.dataset.tab);
+    });
+});
+
+/* Restore last active tab */
+const savedTab = sessionStorage.getItem('agrilms_assignments_tab') || 'all';
+activateTab(savedTab);
+
+</script>
+{% endblock %}

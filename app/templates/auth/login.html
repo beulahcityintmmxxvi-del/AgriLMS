@@ -1,5 +1,306 @@
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>Login</title></head>
-<body><h1>Login Page — Coming Soon</h1><a href="/">Home</a></body>
-</html>
+{% extends 'base.html' %}
+
+{# ============================================================
+   Agri LMS — Login Page
+   ============================================================
+   Clean, secure login form with email and password fields,
+   remember-me option, password visibility toggle, and
+   clear navigation to registration.
+   ============================================================ #}
+
+{% block title %}Log In to Your Account{% endblock %}
+
+{% block head_extra %}
+<style>
+    body.has-sidebar .page-content { margin-left: 0 !important; }
+    body .page-content {
+        padding: 0 !important;
+        background: var(--gray-50) !important;
+    }
+    body .app-body { display: block; }
+    body .footer    { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6rem 1rem 3rem;
+            background: linear-gradient(
+                135deg,
+                var(--green-ghost) 0%,
+                var(--gray-50) 50%,
+                var(--blue-ghost) 100%
+            );">
+
+    <div style="width: 100%; max-width: 440px;">
+
+        {# Back to home #}
+        <div class="text-center mb-4">
+            <a href="{{ url_for('main.index') }}"
+               style="color: var(--green-dark);
+                      font-size: 0.875rem;
+                      font-weight: 600;
+                      text-decoration: none;
+                      display: inline-flex;
+                      align-items: center;
+                      gap: 0.375rem;">
+                ← Back to Home
+            </a>
+        </div>
+
+        {# Login form card #}
+        <div class="form-card">
+
+            {# Card header #}
+            <div class="form-card-header">
+                <div class="form-card-icon">🔑</div>
+                <h1 class="form-card-title">Welcome Back</h1>
+                <p class="form-card-subtitle">
+                    Log in to continue your agricultural
+                    learning journey.
+                </p>
+            </div>
+
+            {# Card body #}
+            <div class="form-card-body">
+
+                <form method="POST"
+                      action="{{ url_for('auth.login') }}"
+                      novalidate
+                      id="loginForm"
+                      autocomplete="on">
+
+                    {# CSRF token #}
+                    <input type="hidden"
+                           name="csrf_token"
+                           value="{{ csrf_token() }}">
+
+                    {# Preserve next URL #}
+                    {% if next_page %}
+                    <input type="hidden"
+                           name="next"
+                           value="{{ next_page }}">
+                    {% endif %}
+
+                    {# ── Email ── #}
+                    <div class="form-group">
+                        <label for="email" class="form-label">
+                            <span class="label-icon">✉️</span>
+                            Email Address
+                            <span class="required">*</span>
+                        </label>
+                        <input type="email"
+                               id="email"
+                               name="email"
+                               class="form-control form-control-lg"
+                               placeholder="you@example.com"
+                               value="{{ form_data.get('email', '') if form_data else '' }}"
+                               autocomplete="email"
+                               autofocus
+                               required>
+                    </div>
+
+                    {# ── Password ── #}
+                    <div class="form-group">
+
+                        <div style="display: flex;
+                                    align-items: center;
+                                    justify-content: space-between;
+                                    margin-bottom: 0.5rem;">
+                            <label for="password" class="form-label"
+                                   style="margin: 0;">
+                                <span class="label-icon">🔒</span>
+                                Password
+                                <span class="required">*</span>
+                            </label>
+                            <a href="#"
+                               style="font-size: 0.8125rem;
+                                      color: var(--green-mid);
+                                      font-weight: 600;
+                                      text-decoration: none;">
+                                Forgot password?
+                            </a>
+                        </div>
+
+                        <div class="input-group">
+                            <input type="password"
+                                   id="password"
+                                   name="password"
+                                   class="form-control form-control-lg"
+                                   placeholder="Enter your password"
+                                   autocomplete="current-password"
+                                   maxlength="128"
+                                   required>
+                            <button type="button"
+                                    class="input-group-btn"
+                                    id="togglePassword"
+                                    aria-label="Toggle password visibility"
+                                    style="font-size: 1rem;">
+                                👁️
+                            </button>
+                        </div>
+
+                    </div>
+
+                    {# ── Remember Me ── #}
+                    <div class="form-group">
+                        <label class="form-check">
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   name="remember_me"
+                                   id="remember_me"
+                                   {% if form_data and form_data.get('remember_me') %}
+                                       checked
+                                   {% endif %}>
+                            <span class="form-check-label">
+                                Keep me logged in for 30 days
+                            </span>
+                        </label>
+                    </div>
+
+                    {# ── Submit ── #}
+                    <button type="submit"
+                            class="btn btn-primary btn-block btn-lg"
+                            id="submitBtn"
+                            style="margin-top: 0.5rem;">
+                        <span id="submitBtnText">🔑 Log In</span>
+                    </button>
+
+                </form>
+
+                {# ── Divider ── #}
+                <div class="form-divider">or</div>
+
+                {# ── Register CTA ── #}
+                <div class="text-center">
+                    <p style="font-size: 0.9rem;
+                              color: var(--gray-600);
+                              margin-bottom: 0.75rem;">
+                        New to Agri LMS?
+                    </p>
+                    <a href="{{ url_for('auth.register') }}"
+                       class="btn btn-outline-primary btn-block">
+                        🌱 Create a Free Account
+                    </a>
+                </div>
+
+            </div>
+            {# end form-card-body #}
+
+            {# Card footer #}
+            <div class="form-card-footer">
+                By logging in, you agree to our
+                <a href="#"
+                   style="color: var(--green-dark);">
+                    Terms of Service
+                </a>
+                and
+                <a href="#"
+                   style="color: var(--green-dark);">
+                    Privacy Policy
+                </a>.
+            </div>
+
+        </div>
+        {# end form-card #}
+
+        {# Demo credentials notice #}
+        <div style="margin-top: 1.5rem;
+                    padding: 1rem 1.25rem;
+                    background: var(--gold-ghost);
+                    border: 1px solid var(--gold-pale);
+                    border-radius: 0.875rem;
+                    text-align: center;">
+            <p style="font-size: 0.8125rem;
+                      color: var(--gold-dark);
+                      font-weight: 600;
+                      margin-bottom: 0.25rem;">
+                🎓 New here?
+            </p>
+            <p style="font-size: 0.8rem;
+                      color: var(--gray-600);
+                      margin: 0;
+                      line-height: 1.5;">
+                Create a free account to access all courses,
+                videos, and materials. No payment required.
+            </p>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+'use strict';
+
+/* =============================================================
+   Login Page — Scripts
+   Handles:
+       - Password visibility toggle
+       - Form submit loading state
+       - Client-side validation
+   ============================================================= */
+
+/* ── Password Toggle ──────────────────────────────────────── */
+document.getElementById('togglePassword').addEventListener('click',
+    function() {
+        const input  = document.getElementById('password');
+        const isText = input.type === 'text';
+        input.type   = isText ? 'password' : 'text';
+        this.textContent = isText ? '👁️' : '🙈';
+        this.setAttribute('aria-label',
+            isText ? 'Show password' : 'Hide password');
+    }
+);
+
+
+/* ── Form Submit ──────────────────────────────────────────── */
+document.getElementById('loginForm').addEventListener('submit',
+    function(e) {
+
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    let isValid = true;
+
+    if (!email || !email.includes('@')) {
+        showToast('Please enter a valid email address.', 'danger');
+        isValid = false;
+    }
+
+    if (!password) {
+        showToast('Please enter your password.', 'danger');
+        isValid = false;
+    }
+
+    if (!isValid) {
+        e.preventDefault();
+        return;
+    }
+
+    /* Loading state */
+    const btn     = document.getElementById('submitBtn');
+    const btnText = document.getElementById('submitBtnText');
+    btn.disabled        = true;
+    btn.classList.add('loading');
+    btnText.textContent = 'Logging in...';
+});
+
+
+/* ── Auto-focus email field ───────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function() {
+    const emailField = document.getElementById('email');
+    if (emailField && !emailField.value) {
+        emailField.focus();
+    }
+});
+
+</script>
+{% endblock %}

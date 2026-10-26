@@ -1,0 +1,1166 @@
+{% extends 'base.html' %}
+
+{# ============================================================
+   Agri LMS — Module Viewer
+   ============================================================
+   File    : app/templates/learner/module_view.html
+   Purpose : Renders the module learning page showing:
+               - Video materials — HTML5 streaming player
+               - PDF materials   — iframe browser viewer
+               - Documents       — download card
+               - Images          — inline display
+               - Module notes    — admin-written content
+               - Learner notes   — private study notepad
+               - Material list   — sidebar navigation
+               - Module nav      — prev/next with progress
+               - Mark complete   — completion button
+   ============================================================ #}
+
+{% block title %}{{ module.get_module_label() }} — {{ course.title }}{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* Module viewer uses full width with no extra top padding */
+    body .page-content {
+        padding: 1rem !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Breadcrumb ────────────────────────────────────────────── #}
+{% block breadcrumb %}
+<nav aria-label="Breadcrumb"
+     style="margin-bottom: 1rem;
+            font-size: 0.8125rem;
+            color: var(--gray-500);
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            flex-wrap: wrap;">
+
+    <a href="{{ url_for('learner.dashboard') }}"
+       style="color: var(--green-mid); text-decoration: none;">
+        Dashboard
+    </a>
+    <span aria-hidden="true">›</span>
+    <a href="{{ url_for('courses.catalog') }}"
+       style="color: var(--green-mid); text-decoration: none;">
+        Courses
+    </a>
+    <span aria-hidden="true">›</span>
+    <a href="{{ url_for('courses.course_detail', course_id=course.id) }}"
+       style="color: var(--green-mid); text-decoration: none;">
+        {{ course.title | truncate_words(6) }}
+    </a>
+    <span aria-hidden="true">›</span>
+    <span style="color: var(--gray-700); font-weight: 600;">
+        {{ module.get_module_label() }}
+    </span>
+
+</nav>
+{% endblock %}
+
+
+{# ── Module View Layout ────────────────────────────────────── #}
+<div style="display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 1.25rem;
+            align-items: flex-start;"
+     id="moduleLayout">
+
+
+    {# ══ MAIN CONTENT COLUMN ═══════════════════════════════════ #}
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+
+
+        {# ── Primary Material Viewer ── #}
+        {% if primary_material %}
+
+            {# ======================================================
+               VIDEO PLAYER
+               HTML5 native player with controls, download option.
+               ====================================================== #}
+            {% if primary_material.is_video() %}
+
+            <div class="video-player-container">
+
+                {# Player header #}
+                <div class="video-player-header">
+                    <span style="font-size: 1.1rem;" aria-hidden="true">🎬</span>
+                    <div class="video-player-title">
+                        {{ primary_material.title }}
+                    </div>
+                    {% if primary_material.video_duration_seconds %}
+                    <span class="video-player-badge">
+                        {{ primary_material.get_video_duration_display() }}
+                    </span>
+                    {% endif %}
+                    <span class="video-player-badge">
+                        {{ primary_material.file_extension | upper
+                           if primary_material.file_extension else 'VIDEO' }}
+                    </span>
+                </div>
+
+                {# HTML5 Video Player #}
+                <div class="video-wrapper aspect-16-9">
+                    {% if primary_material.is_external and primary_material.external_url %}
+
+                        {# External video — YouTube embed or direct link #}
+                        {% if 'youtube.com' in primary_material.external_url or
+                              'youtu.be' in primary_material.external_url %}
+                            {# YouTube embed iframe #}
+                            <iframe
+                                src="{{ primary_material.external_url
+                                        | replace('watch?v=', 'embed/')
+                                        | replace('youtu.be/', 'youtube.com/embed/') }}"
+                                title="{{ primary_material.title }}"
+                                allow="accelerometer; autoplay; clipboard-write;
+                                       encrypted-media; gyroscope; picture-in-picture"
+                                allowfullscreen
+                                style="position: absolute;
+                                       inset: 0;
+                                       width: 100%;
+                                       height: 100%;
+                                       border: none;">
+                            </iframe>
+                        {% else %}
+                            {# Direct external video link #}
+                            <video controls
+                                   preload="metadata"
+                                   id="mainVideoPlayer"
+                                   style="position: absolute;
+                                          inset: 0;
+                                          width: 100%;
+                                          height: 100%;
+                                          background: black;">
+                                <source src="{{ primary_material.external_url }}">
+                                Your browser does not support HTML5 video.
+                            </video>
+                        {% endif %}
+
+                    {% else %}
+
+                        {# Local hosted video file #}
+                        <video controls
+                               preload="metadata"
+                               id="mainVideoPlayer"
+                               poster="{% if primary_material.video_thumbnail %}
+                                   {{ url_for('static',
+                                       filename='uploads/thumbnails/' +
+                                       primary_material.video_thumbnail) }}
+                               {% endif %}"
+                               style="position: absolute;
+                                      inset: 0;
+                                      width: 100%;
+                                      height: 100%;
+                                      background: black;">
+
+                            {% if primary_material.stored_file_name %}
+                            <source src="{{ url_for('static',
+                                          filename='uploads/materials/' +
+                                          primary_material.stored_file_name) }}"
+                                    type="{{ primary_material.mime_type or 'video/mp4' }}">
+                            {% endif %}
+
+                            Your browser does not support the HTML5 video player.
+                            Please
+                            <a href="{{ url_for('static',
+                                      filename='uploads/materials/' +
+                                      primary_material.stored_file_name) }}"
+                               style="color: var(--gold-light);">
+                                download the video
+                            </a>
+                            instead.
+
+                        </video>
+
+                    {% endif %}
+                </div>
+                {# end video wrapper #}
+
+                {# Video controls bar #}
+                <div class="video-controls-bar">
+
+                    <div class="video-controls-left">
+                        <span class="video-duration">
+                            {% if primary_material.get_file_size_display() != 'Unknown size' %}
+                                📦 {{ primary_material.get_file_size_display() }}
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="video-controls-right">
+
+                        {# Download button — only if allowed #}
+                        {% if primary_material.allow_download and
+                              primary_material.stored_file_name and
+                              not primary_material.is_external %}
+                        <a href="{{ url_for('static',
+                                  filename='uploads/materials/' +
+                                  primary_material.stored_file_name) }}"
+                           download="{{ primary_material.file_name }}"
+                           class="video-download-btn"
+                           aria-label="Download video">
+                            ⬇️ Download Video
+                        </a>
+                        {% endif %}
+
+                    </div>
+
+                </div>
+                {# end controls bar #}
+
+            </div>
+            {# end video player #}
+
+
+            {# ======================================================
+               PDF VIEWER
+               Renders PDF inside iframe for in-browser viewing.
+               ====================================================== #}
+            {% elif primary_material.is_pdf() %}
+
+            <div class="pdf-viewer-container">
+
+                {# PDF viewer header #}
+                <div class="pdf-viewer-header">
+
+                    <div class="pdf-viewer-title">
+                        <span aria-hidden="true">📄</span>
+                        {{ primary_material.title }}
+                        {% if primary_material.get_file_size_display() != 'Unknown size' %}
+                        <span style="font-weight: 400;
+                                     color: rgba(255,255,255,0.6);
+                                     font-size: 0.75rem;">
+                            ({{ primary_material.get_file_size_display() }})
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="pdf-viewer-actions">
+
+                        {# Open in new tab button #}
+                        {% if primary_material.stored_file_name %}
+                        <a href="{{ url_for('static',
+                                  filename='uploads/materials/' +
+                                  primary_material.stored_file_name) }}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="pdf-viewer-btn"
+                           aria-label="Open PDF in new tab">
+                            🔗 Open in New Tab
+                        </a>
+                        {% endif %}
+
+                        {# Download button #}
+                        {% if primary_material.allow_download and
+                              primary_material.stored_file_name %}
+                        <a href="{{ url_for('static',
+                                  filename='uploads/materials/' +
+                                  primary_material.stored_file_name) }}"
+                           download="{{ primary_material.file_name }}"
+                           class="pdf-viewer-btn"
+                           aria-label="Download PDF">
+                            ⬇️ Download PDF
+                        </a>
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+                {# PDF iframe #}
+                <div class="pdf-iframe-wrapper">
+
+                    <div class="pdf-loading" id="pdfLoading">
+                        <div class="pdf-loading-spinner"></div>
+                        <span>Loading PDF...</span>
+                    </div>
+
+                    {% if primary_material.stored_file_name %}
+                    <iframe
+                        src="{{ url_for('static',
+                              filename='uploads/materials/' +
+                              primary_material.stored_file_name) }}"
+                        title="{{ primary_material.title }}"
+                        id="pdfIframe"
+                        onload="document.getElementById('pdfLoading').style.display='none';"
+                        aria-label="{{ primary_material.title }} PDF viewer">
+                    </iframe>
+                    {% elif primary_material.external_url %}
+                    <iframe
+                        src="{{ primary_material.external_url }}"
+                        title="{{ primary_material.title }}"
+                        id="pdfIframe"
+                        onload="document.getElementById('pdfLoading').style.display='none';"
+                        aria-label="{{ primary_material.title }} PDF viewer">
+                    </iframe>
+                    {% else %}
+                    <div style="display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                height: 100%;
+                                color: rgba(255,255,255,0.5);">
+                        PDF file not available.
+                    </div>
+                    {% endif %}
+
+                </div>
+
+            </div>
+            {# end PDF viewer #}
+
+
+            {# ======================================================
+               IMAGE VIEWER
+               Displays image inline with full-width rendering.
+               ====================================================== #}
+            {% elif primary_material.is_image() %}
+
+            <div class="image-viewer">
+
+                <div style="text-align: center;
+                            padding: 1rem 1rem 0.5rem;
+                            font-size: 0.875rem;
+                            font-weight: 600;
+                            color: var(--gray-600);">
+                    🖼️ {{ primary_material.title }}
+                </div>
+
+                {% if primary_material.stored_file_name %}
+                <img src="{{ url_for('static',
+                            filename='uploads/materials/' +
+                            primary_material.stored_file_name) }}"
+                     alt="{{ primary_material.title }}"
+                     style="max-width: 100%;
+                            max-height: 600px;
+                            object-fit: contain;
+                            border-radius: 0.75rem;
+                            box-shadow: var(--shadow-lg);
+                            margin: 0 auto;">
+                {% endif %}
+
+                {% if primary_material.allow_download and
+                      primary_material.stored_file_name %}
+                <div style="margin-top: 1rem;">
+                    <a href="{{ url_for('static',
+                              filename='uploads/materials/' +
+                              primary_material.stored_file_name) }}"
+                       download="{{ primary_material.file_name }}"
+                       class="btn btn-outline-primary btn-sm">
+                        ⬇️ Download Image
+                    </a>
+                </div>
+                {% endif %}
+
+            </div>
+            {# end image viewer #}
+
+
+            {# ======================================================
+               DOWNLOAD CARD
+               For documents and other file types that cannot
+               be rendered inline in the browser.
+               ====================================================== #}
+            {% else %}
+
+            <div class="download-card">
+
+                <div class="download-card-icon">
+                    {{ primary_material.get_type_icon() }}
+                </div>
+
+                <div class="download-card-info">
+
+                    <div class="download-card-name">
+                        {{ primary_material.title }}
+                    </div>
+
+                    <div class="download-card-meta">
+                        {{ primary_material.get_type_label() }}
+                        {% if primary_material.file_extension %}
+                            ({{ primary_material.file_extension | upper }})
+                        {% endif %}
+                        {% if primary_material.get_file_size_display() != 'Unknown size' %}
+                            · {{ primary_material.get_file_size_display() }}
+                        {% endif %}
+                    </div>
+
+                    {% if primary_material.description %}
+                    <p style="font-size: 0.875rem;
+                              color: var(--gray-600);
+                              margin-bottom: 1rem;
+                              line-height: 1.5;">
+                        {{ primary_material.description }}
+                    </p>
+                    {% endif %}
+
+                    {% if primary_material.stored_file_name %}
+                    <a href="{{ url_for('static',
+                              filename='uploads/materials/' +
+                              primary_material.stored_file_name) }}"
+                       download="{{ primary_material.file_name }}"
+                       class="btn btn-primary">
+                        ⬇️ Download {{ primary_material.get_type_label() }}
+                    </a>
+                    {% elif primary_material.external_url %}
+                    <a href="{{ primary_material.external_url }}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="btn btn-primary">
+                        🔗 Open Resource
+                    </a>
+                    {% endif %}
+
+                </div>
+
+            </div>
+            {# end download card #}
+
+            {% endif %}
+            {# end primary material type check #}
+
+
+        {% else %}
+
+            {# No materials uploaded yet #}
+            <div class="card">
+                <div class="card-body">
+                    <div class="empty-state" style="min-height: 200px;">
+                        <span class="empty-state-illustration">📭</span>
+                        <h3 class="empty-state-title">
+                            No Materials Yet
+                        </h3>
+                        <p class="empty-state-text">
+                            The instructor has not uploaded any materials
+                            for this module yet. Check back soon.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        {% endif %}
+        {# end primary material check #}
+
+
+        {# ── Module Description and Notes ── #}
+        {% if module.description or module.notes %}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    📋 Module Overview
+                </h2>
+            </div>
+
+            <div class="card-body">
+
+                {% if module.description %}
+                <div style="font-size: 0.9375rem;
+                            color: var(--gray-700);
+                            line-height: 1.7;
+                            margin-bottom: {% if module.notes %}1.5rem{% else %}0{% endif %};">
+                    {{ module.description | replace('\n', '<br>') | safe }}
+                </div>
+                {% endif %}
+
+                {% if module.notes %}
+                <div style="background: var(--gold-ghost);
+                            border: 1px solid var(--gold-pale);
+                            border-radius: 0.75rem;
+                            padding: 1rem 1.25rem;">
+                    <div style="font-weight: 700;
+                                color: var(--gold-dark);
+                                font-size: 0.875rem;
+                                margin-bottom: 0.5rem;
+                                display: flex;
+                                align-items: center;
+                                gap: 0.375rem;">
+                        📌 Key Notes
+                    </div>
+                    <div style="font-size: 0.875rem;
+                                color: var(--gray-700);
+                                line-height: 1.65;">
+                        {{ module.notes | replace('\n', '<br>') | safe }}
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+        </div>
+        {% endif %}
+
+
+        {# ── Learning Objectives ── #}
+        {% if module.get_learning_objectives_list() %}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    🎯 Learning Objectives
+                </h2>
+            </div>
+
+            <div class="card-body">
+                <div style="display: flex;
+                            flex-direction: column;
+                            gap: 0.625rem;">
+                    {% for objective in module.get_learning_objectives_list() %}
+                    <div style="display: flex;
+                                align-items: flex-start;
+                                gap: 0.75rem;">
+                        <div style="width: 22px;
+                                    height: 22px;
+                                    border-radius: 50%;
+                                    background: var(--green-ghost);
+                                    color: var(--green-dark);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-size: 0.7rem;
+                                    font-weight: 700;
+                                    flex-shrink: 0;
+                                    margin-top: 2px;">
+                            {{ loop.index }}
+                        </div>
+                        <span style="font-size: 0.875rem;
+                                     color: var(--gray-700);
+                                     line-height: 1.55;">
+                            {{ objective }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+        {% endif %}
+
+
+        {# ── Personal Study Notes ── #}
+        {% if current_user.is_learner() %}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    📓 My Study Notes
+                </h2>
+                <span style="font-size: 0.75rem;
+                             color: var(--gray-400);">
+                    Private — only visible to you
+                </span>
+            </div>
+
+            <div class="card-body">
+
+                <textarea id="studyNotes"
+                          class="form-control"
+                          rows="5"
+                          placeholder="Write your personal study notes for this module here. Your notes are saved automatically and are private to you..."
+                          style="font-size: 0.875rem;
+                                 line-height: 1.6;
+                                 resize: vertical;">{{ progress.learner_notes if progress and progress.learner_notes else '' }}</textarea>
+
+                <div style="display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            margin-top: 0.75rem;">
+
+                    <span id="notesSaveStatus"
+                          style="font-size: 0.75rem;
+                                 color: var(--gray-400);">
+                        Notes are saved automatically.
+                    </span>
+
+                    <button type="button"
+                            class="btn btn-primary btn-sm"
+                            id="saveNotesBtn"
+                            onclick="saveNotes()">
+                        💾 Save Notes
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+        {% endif %}
+        {# end study notes #}
+
+
+        {# ── Mark Complete + Navigation ── #}
+        {% if current_user.is_learner() %}
+        <div class="mark-complete-section
+            {% if progress and progress.is_completed %}already-done{% endif %}">
+
+            <span class="mark-complete-icon">
+                {% if progress and progress.is_completed %}✅{% else %}📖{% endif %}
+            </span>
+
+            <div class="mark-complete-title">
+                {% if progress and progress.is_completed %}
+                    Module Completed!
+                {% else %}
+                    Ready to Mark as Complete?
+                {% endif %}
+            </div>
+
+            <p class="mark-complete-text">
+                {% if progress and progress.is_completed %}
+                    You have already completed this module.
+                    {% if next_module %}
+                        Continue to the next module below.
+                    {% else %}
+                        You have reached the end of the course content.
+                    {% endif %}
+                {% else %}
+                    Once you have reviewed all the materials in this
+                    module, click the button below to mark it as
+                    complete and unlock the next module.
+                {% endif %}
+            </p>
+
+            {% if not (progress and progress.is_completed) %}
+            <form method="POST"
+                  action="{{ url_for('courses.mark_module_complete',
+                                     course_id=course.id,
+                                     module_id=module.id) }}"
+                  id="markCompleteForm">
+                <input type="hidden"
+                       name="csrf_token"
+                       value="{{ csrf_token() }}">
+                <button type="submit"
+                        class="btn btn-primary btn-lg"
+                        id="markCompleteBtn">
+                    ✅ Mark Module as Complete
+                    {% if module.is_last_module %}
+                        & Complete Course
+                    {% endif %}
+                </button>
+            </form>
+            {% endif %}
+
+        </div>
+        {% endif %}
+        {# end mark complete #}
+
+
+        {# ── Module Navigation ── #}
+        <div class="module-navigator">
+
+            {# Previous module #}
+            <div>
+                {% if prev_module %}
+                <a href="{{ url_for('courses.module_view',
+                                   course_id=course.id,
+                                   module_id=prev_module.id) }}"
+                   class="btn btn-light">
+                    ← Previous Module
+                </a>
+                {% else %}
+                <a href="{{ url_for('courses.course_detail',
+                                   course_id=course.id) }}"
+                   class="btn btn-light">
+                    ← Course Overview
+                </a>
+                {% endif %}
+            </div>
+
+            {# Center label #}
+            <div class="module-navigator-center">
+                <div class="module-navigator-label">
+                    Current Module
+                </div>
+                <div class="module-navigator-title">
+                    {{ module.get_module_label() }}
+                </div>
+                {% if progress and progress.time_spent_minutes > 0 %}
+                <div style="font-size: 0.7rem;
+                            color: var(--gray-400);
+                            margin-top: 2px;">
+                    ⏱️ {{ progress.get_time_spent_display() }} studied
+                </div>
+                {% endif %}
+            </div>
+
+            {# Next module #}
+            <div>
+                {% if next_module %}
+                <a href="{{ url_for('courses.module_view',
+                                   course_id=course.id,
+                                   module_id=next_module.id) }}"
+                   class="btn btn-primary">
+                    Next Module →
+                </a>
+                {% else %}
+                <a href="{{ url_for('courses.course_detail',
+                                   course_id=course.id) }}"
+                   class="btn btn-primary">
+                    Finish Course →
+                </a>
+                {% endif %}
+            </div>
+
+        </div>
+        {# end module navigator #}
+
+
+    </div>
+    {# end main content column #}
+
+    
+    {# ══ RIGHT SIDEBAR ════════════════════════════════════════ #}
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+
+
+        {# ── Module Progress Summary ── #}
+        {% if current_user.is_learner() and enrollment %}
+        <div class="card">
+            <div class="card-body compact">
+
+                <div style="font-size: 0.75rem;
+                            font-weight: 700;
+                            color: var(--gray-400);
+                            text-transform: uppercase;
+                            letter-spacing: 0.07em;
+                            margin-bottom: 0.875rem;">
+                    Course Progress
+                </div>
+
+                {# Circular-style progress display #}
+                <div style="display: flex;
+                            align-items: center;
+                            gap: 1rem;
+                            margin-bottom: 1rem;">
+
+                    <div style="flex-shrink: 0; text-align: center;">
+                        <div style="font-size: 1.75rem;
+                                    font-weight: 900;
+                                    color: var(--green-dark);
+                                    line-height: 1;">
+                            {{ enrollment.progress_percent | int }}%
+                        </div>
+                        <div style="font-size: 0.65rem;
+                                    color: var(--gray-400);
+                                    text-transform: uppercase;">
+                            Complete
+                        </div>
+                    </div>
+
+                    <div style="flex: 1;">
+                        <div class="progress progress-sm"
+                             style="margin-bottom: 4px;">
+                            <div class="progress-bar bar-green"
+                                 data-value="{{ enrollment.progress_percent or 0 }}"
+                                 style="width: {{ enrollment.progress_percent or 0 }}%;">
+                            </div>
+                        </div>
+                        <div style="font-size: 0.7rem;
+                                    color: var(--gray-400);">
+                            {{ enrollment.modules_completed }} of
+                            {{ all_modules | length }} modules done
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+        {% endif %}
+
+
+        {# ── Materials List Panel ── #}
+        {% if materials %}
+        <div class="material-list-panel">
+
+            <div class="material-list-header">
+                <div class="material-list-title">
+                    📁 Module Materials
+                    <span class="badge badge-light badge-sm"
+                          style="margin-left: 4px;">
+                        {{ materials | length }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="material-list-body">
+
+                {% for material in materials %}
+                <a href="{{ url_for('courses.module_view',
+                                   course_id=course.id,
+                                   module_id=module.id,
+                                   material=material.id) }}"
+                   class="material-item
+                       {% if material.is_video() %}video-type
+                       {% elif material.is_pdf() %}pdf-type
+                       {% elif material.is_document() %}doc-type{% endif %}
+                       {% if primary_material and material.id == primary_material.id %}active{% endif %}"
+                   aria-label="{{ material.title }}"
+                   aria-current="{% if primary_material and material.id == primary_material.id %}true{% endif %}">
+
+                    <div class="material-item-icon">
+                        {{ material.get_type_icon() }}
+                    </div>
+
+                    <div class="material-item-info">
+                        <div class="material-item-title">
+                            {{ material.title }}
+                        </div>
+                        <div class="material-item-meta">
+                            <span>{{ material.get_type_label() }}</span>
+                            {% if material.is_video() and
+                                  material.video_duration_seconds %}
+                            <span>{{ material.get_video_duration_display() }}</span>
+                            {% elif material.file_size_bytes %}
+                            <span>{{ material.get_file_size_display() }}</span>
+                            {% endif %}
+                            {% if not material.allow_download %}
+                            <span title="View only">🔒</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </a>
+                {% endfor %}
+
+            </div>
+
+        </div>
+        {% endif %}
+        {# end materials list #}
+
+
+        {# ── All Modules Navigation ── #}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title"
+                    style="font-size: 0.875rem;">
+                    📖 All Modules
+                </h2>
+            </div>
+
+            <div style="max-height: 350px; overflow-y: auto;">
+                {% for mod in all_modules %}
+                <a href="{{ url_for('courses.module_view',
+                                   course_id=course.id,
+                                   module_id=mod.id) }}"
+                   style="display: flex;
+                          align-items: center;
+                          gap: 0.625rem;
+                          padding: 0.625rem 1rem;
+                          border-bottom: 1px solid var(--gray-100);
+                          text-decoration: none;
+                          transition: background 0.15s;
+                          {% if mod.id == module.id %}
+                              background: var(--green-ghost);
+                              border-left: 3px solid var(--green-dark);
+                          {% endif %}"
+                   class="module-nav-link">
+
+                    {# Completion or current indicator #}
+                    <div style="width: 24px;
+                                height: 24px;
+                                border-radius: 50%;
+                                background:
+                                    {% if mod.id in completed_modules %}var(--green-mid)
+                                    {% elif mod.id == module.id %}var(--gold-mid)
+                                    {% else %}var(--gray-100){% endif %};
+                                color:
+                                    {% if mod.id in completed_modules or mod.id == module.id %}white
+                                    {% else %}var(--gray-400){% endif %};
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 0.65rem;
+                                font-weight: 800;
+                                flex-shrink: 0;">
+                        {% if mod.id in completed_modules %}✓
+                        {% else %}{{ mod.order_number }}{% endif %}
+                    </div>
+
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 0.8rem;
+                                    font-weight:
+                                        {% if mod.id == module.id %}700{% else %}500{% endif %};
+                                    color:
+                                        {% if mod.id == module.id %}var(--green-dark)
+                                        {% elif mod.id in completed_modules %}var(--gray-600)
+                                        {% else %}var(--gray-700){% endif %};
+                                    white-space: nowrap;
+                                    overflow: hidden;
+                                    text-overflow: ellipsis;">
+                            {{ mod.title }}
+                        </div>
+                        {% if mod.is_last_module %}
+                        <div style="font-size: 0.65rem;
+                                    color: var(--gold-dark);
+                                    font-weight: 600;">
+                            Final Module
+                        </div>
+                        {% endif %}
+                    </div>
+
+                </a>
+                {% endfor %}
+            </div>
+
+        </div>
+        {# end all modules nav #}
+
+
+        {# ── Back to Course ── #}
+        <a href="{{ url_for('courses.course_detail',
+                           course_id=course.id) }}"
+           class="btn btn-light btn-block">
+            ← Back to Course
+        </a>
+
+
+    </div>
+    {# end right sidebar #}
+
+
+</div>
+{# end module layout grid #}
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+'use strict';
+
+/* =============================================================
+   Module Viewer — Scripts
+   Handles:
+       - Responsive layout adjustment
+       - Video player time tracking
+       - Auto-save study notes
+       - Mark complete button loading state
+       - Time spent tracking (sent on page leave)
+       - Module nav link hover
+   ============================================================= */
+
+/* ── 1. RESPONSIVE LAYOUT ────────────────────────────────── */
+(function() {
+    const layout = document.getElementById('moduleLayout');
+    if (!layout) return;
+
+    function adjustLayout() {
+        if (window.innerWidth <= 991) {
+            layout.style.gridTemplateColumns = '1fr';
+        } else {
+            layout.style.gridTemplateColumns = '1fr 300px';
+        }
+    }
+
+    adjustLayout();
+    window.addEventListener('resize', adjustLayout);
+})();
+
+
+/* ── 2. TIME SPENT TRACKING ──────────────────────────────── */
+(function() {
+    const startTime = Date.now();
+    const courseId  = {{ course.id }};
+    const moduleId  = {{ module.id }};
+
+    /* Send time spent when learner leaves the page */
+    function sendTimeSpent() {
+        const minutesSpent = Math.round(
+            (Date.now() - startTime) / 60000
+        );
+
+        if (minutesSpent <= 0) return;
+
+        /* Use sendBeacon for reliable page-leave sending */
+        const formData = new FormData();
+        formData.append('minutes', minutesSpent);
+        formData.append('csrf_token', '{{ csrf_token() }}');
+
+        const url = '/courses/' + courseId +
+                    '/modules/' + moduleId + '/time';
+
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(url, formData);
+        } else {
+            /* Fallback for older browsers */
+            fetch(url, {
+                method:      'POST',
+                body:        formData,
+                keepalive:   true,
+            }).catch(function() {});
+        }
+    }
+
+    window.addEventListener('beforeunload', sendTimeSpent);
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            sendTimeSpent();
+        }
+    });
+})();
+
+
+/* ── 3. STUDY NOTES AUTO-SAVE ────────────────────────────── */
+const courseIdForNotes  = {{ course.id }};
+const moduleIdForNotes  = {{ module.id }};
+
+let notesSaveTimeout = null;
+
+function saveNotes() {
+    const notes     = document.getElementById('studyNotes');
+    const status    = document.getElementById('notesSaveStatus');
+    const saveBtn   = document.getElementById('saveNotesBtn');
+
+    if (!notes || !status) return;
+
+    status.textContent = 'Saving...';
+    status.style.color = 'var(--gray-400)';
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+    }
+
+    const formData = new FormData();
+    formData.append('notes',       notes.value);
+    formData.append('csrf_token',  '{{ csrf_token() }}');
+
+    fetch(
+        '/courses/' + courseIdForNotes +
+        '/modules/' + moduleIdForNotes + '/notes',
+        {
+            method: 'POST',
+            body:   formData,
+        }
+    )
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            status.textContent = '✅ Notes saved at ' +
+                new Date().toLocaleTimeString();
+            status.style.color = 'var(--green-mid)';
+        } else {
+            status.textContent = '❌ ' + (data.message || 'Save failed.');
+            status.style.color = 'var(--red-mid)';
+        }
+    })
+    .catch(function() {
+        status.textContent = '❌ Save failed. Check your connection.';
+        status.style.color = 'var(--red-mid)';
+    })
+    .finally(function() {
+        if (saveBtn) {
+            saveBtn.disabled    = false;
+            saveBtn.textContent = '💾 Save Notes';
+        }
+        /* Reset status message after 4 seconds */
+        setTimeout(function() {
+            if (status) {
+                status.textContent = 'Notes are saved automatically.';
+                status.style.color = 'var(--gray-400)';
+            }
+        }, 4000);
+    });
+}
+
+/* Auto-save notes after 3 seconds of inactivity */
+(function() {
+    const notesArea = document.getElementById('studyNotes');
+    if (!notesArea) return;
+
+    notesArea.addEventListener('input', function() {
+        clearTimeout(notesSaveTimeout);
+        const status = document.getElementById('notesSaveStatus');
+        if (status) {
+            status.textContent = 'Unsaved changes...';
+            status.style.color = 'var(--orange-mid)';
+        }
+        notesSaveTimeout = setTimeout(saveNotes, 3000);
+    });
+})();
+
+
+/* ── 4. MARK COMPLETE BUTTON LOADING STATE ───────────────── */
+(function() {
+    const form = document.getElementById('markCompleteForm');
+    const btn  = document.getElementById('markCompleteBtn');
+
+    if (!form || !btn) return;
+
+    form.addEventListener('submit', function() {
+        btn.disabled     = true;
+        btn.textContent  = '⏳ Saving progress...';
+        btn.classList.add('loading');
+    });
+})();
+
+
+/* ── 5. PDF IFRAME LOAD TIMEOUT ──────────────────────────── */
+(function() {
+    const iframe  = document.getElementById('pdfIframe');
+    const loading = document.getElementById('pdfLoading');
+
+    if (!iframe || !loading) return;
+
+    /* Hide loading after 10 seconds regardless of load event */
+    setTimeout(function() {
+        if (loading.style.display !== 'none') {
+            loading.style.display = 'none';
+        }
+    }, 10000);
+})();
+
+
+/* ── 6. VIDEO PLAYER ENHANCEMENTS ────────────────────────── */
+(function() {
+    const video = document.getElementById('mainVideoPlayer');
+    if (!video) return;
+
+    /* Remember playback position in sessionStorage */
+    const storageKey = 'agrilms_video_pos_{{ module.id }}_{{ primary_material.id if primary_material else 0 }}';
+
+    /* Restore saved position */
+    const savedTime = sessionStorage.getItem(storageKey);
+    if (savedTime) {
+        video.currentTime = parseFloat(savedTime);
+    }
+
+    /* Save position every 5 seconds while playing */
+    video.addEventListener('timeupdate', function() {
+        if (Math.round(video.currentTime) % 5 === 0) {
+            sessionStorage.setItem(
+                storageKey,
+                video.currentTime
+            );
+        }
+    });
+
+    /* Clear saved position when video ends */
+    video.addEventListener('ended', function() {
+        sessionStorage.removeItem(storageKey);
+    });
+})();
+
+
+/* ── 7. MODULE NAV LINK HOVER ────────────────────────────── */
+document.querySelectorAll('.module-nav-link').forEach(function(link) {
+    link.addEventListener('mouseenter', function() {
+        if (!this.style.background.includes('green-ghost')) {
+            this.style.background = 'var(--gray-50)';
+        }
+    });
+    link.addEventListener('mouseleave', function() {
+        if (!this.style.background.includes('green-ghost')) {
+            this.style.background = '';
+        }
+    });
+});
+
+</script>
+{% endblock %}

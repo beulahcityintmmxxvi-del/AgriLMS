@@ -1,0 +1,651 @@
+{% extends 'base.html' %}
+
+{# ============================================================
+   Agri LMS — Learner Profile Page
+   ============================================================
+   File    : app/templates/learner/profile.html
+   Purpose : Allows learners to view and update their profile
+             including personal information, location, bio,
+             and farming background. Also displays account
+             statistics and enrollment summary.
+   ============================================================ #}
+
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+
+{# ── Page Header ───────────────────────────────────────────── #}
+<div style="margin-bottom:2rem;">
+    <div class="page-title">
+        <span class="title-icon">👤</span>
+        My Profile
+    </div>
+    <p class="page-subtitle">
+        Manage your personal information and account settings.
+    </p>
+</div>
+
+
+{# ── Main Profile Grid ─────────────────────────────────────── #}
+<div style="display:grid;
+            grid-template-columns:300px 1fr;
+            gap:1.5rem;
+            align-items:flex-start;"
+     id="profileGrid">
+
+
+    {# ══ LEFT — Profile Card ═══════════════════════════════════ #}
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+
+        {# ── Avatar and Name Card ── #}
+        <div class="card" style="text-align:center;">
+
+            <div style="padding:2rem 1.5rem 1.5rem;">
+
+                {# Avatar circle #}
+                <div style="width:90px;height:90px;
+                            border-radius:50%;
+                            background:var(--green-mid);
+                            color:white;
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            font-size:2.25rem;
+                            font-weight:700;
+                            margin:0 auto 1rem;
+                            border:4px solid var(--green-pale);
+                            overflow:hidden;
+                            position:relative;">
+                    {% if current_user.profile_photo and
+                          current_user.profile_photo != 'default_profile.png' %}
+                        <img src="{{ url_for('static',
+                                   filename='uploads/profiles/' +
+                                   current_user.profile_photo) }}"
+                             alt="{{ current_user.full_name }}"
+                             style="width:100%;height:100%;object-fit:cover;">
+                    {% else %}
+                        {{ current_user.full_name[0].upper()
+                           if current_user.full_name else '?' }}
+                    {% endif %}
+                </div>
+
+                <div style="font-size:1.1rem;font-weight:800;
+                            color:var(--gray-900);
+                            margin-bottom:0.25rem;">
+                    {{ current_user.full_name }}
+                </div>
+
+                <div style="font-size:0.8rem;color:var(--gray-500);
+                            margin-bottom:0.75rem;">
+                    {{ current_user.email }}
+                </div>
+
+                <span class="badge badge-solid-green"
+                      style="font-size:0.75rem;">
+                    🌱 Learner
+                </span>
+
+            </div>
+
+            <div style="border-top:1px solid var(--color-border);
+                        padding:1rem 1.5rem;">
+
+                {# Quick stats #}
+                <div style="display:grid;
+                            grid-template-columns:1fr 1fr 1fr;
+                            gap:0.5rem;text-align:center;">
+
+                    {% set stats = [
+                        (current_user.total_enrollments(),
+                         'Enrolled', 'var(--green-dark)'),
+                        (current_user.completed_courses(),
+                         'Completed', 'var(--gold-dark)'),
+                        (current_user.enrollments.filter_by(
+                             certificate_issued=True
+                         ).count(), 'Certs', 'var(--blue-dark)'),
+                    ] %}
+
+                    {% for value, label, color in stats %}
+                    <div>
+                        <div style="font-size:1.25rem;
+                                    font-weight:900;
+                                    color:{{ color }};">
+                            {{ value }}
+                        </div>
+                        <div style="font-size:0.65rem;
+                                    color:var(--gray-400);
+                                    text-transform:uppercase;
+                                    letter-spacing:0.05em;">
+                            {{ label }}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </div>
+        {# end avatar card #}
+
+
+        {# ── Account Details Card ── #}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-header-title"
+                    style="font-size:0.875rem;">
+                    🔑 Account Details
+                </h2>
+            </div>
+            <div class="card-body compact">
+
+                {% set account_details = [
+                    ('📧', 'Email', current_user.email),
+                    ('📱', 'Phone',
+                     current_user.phone_number or 'Not set'),
+                    ('📍', 'State',
+                     current_user.state or 'Not set'),
+                    ('🌍', 'Country',
+                     current_user.country or 'Nigeria'),
+                    ('📅', 'Member Since',
+                     current_user.date_registered | dateformat('%d %b %Y')
+                     if current_user.date_registered else 'N/A'),
+                    ('🔐', 'Last Login',
+                     current_user.last_login | dateformat('%d %b %Y at %I:%M %p')
+                     if current_user.last_login else 'Today'),
+                ] %}
+
+                <div style="display:flex;
+                            flex-direction:column;
+                            gap:0.75rem;">
+                    {% for icon, label, value in account_details %}
+                    <div style="display:flex;
+                                flex-direction:column;
+                                gap:2px;">
+                        <span style="font-size:0.7rem;
+                                     color:var(--gray-400);
+                                     font-weight:600;
+                                     text-transform:uppercase;
+                                     letter-spacing:0.05em;
+                                     display:flex;
+                                     align-items:center;
+                                     gap:0.375rem;">
+                            {{ icon }} {{ label }}
+                        </span>
+                        <span style="font-size:0.8125rem;
+                                     color:var(--gray-700);
+                                     font-weight:500;
+                                     word-break:break-all;">
+                            {{ value }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+        </div>
+
+
+        {# ── Quick Links ── #}
+        <div class="card">
+            <div class="card-body compact">
+                <div style="display:flex;
+                            flex-direction:column;
+                            gap:0.5rem;">
+
+                    {% set quick_links = [
+                        (url_for('learner.dashboard'), '📊', 'My Dashboard'),
+                        (url_for('learner.my_courses'), '📚', 'My Courses'),
+                        (url_for('learner.assignments'), '📝', 'Assignments'),
+                        (url_for('learner.progress'), '📈', 'My Progress'),
+                        (url_for('auth.logout'), '🚪', 'Log Out'),
+                    ] %}
+
+                    {% for link, icon, label in quick_links %}
+                    <a href="{{ link }}"
+                       style="display:flex;
+                              align-items:center;
+                              gap:0.625rem;
+                              padding:0.625rem 0.75rem;
+                              border-radius:0.625rem;
+                              text-decoration:none;
+                              color:var(--gray-700);
+                              font-size:0.875rem;
+                              font-weight:500;
+                              transition:background 0.15s;
+                              {% if label == 'Log Out' %}
+                                  color:var(--red-mid);
+                              {% endif %}"
+                       class="profile-quick-link">
+                        <span>{{ icon }}</span>
+                        <span>{{ label }}</span>
+                    </a>
+                    {% endfor %}
+
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+    {# end left column #}
+
+
+    {# ══ RIGHT — Edit Profile Form ════════════════════════════ #}
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+
+        {# ── Edit Profile Form ── #}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    ✏️ Edit Profile Information
+                </h2>
+                <span style="font-size:0.8rem;color:var(--gray-400);">
+                    Fields marked with
+                    <span style="color:var(--red-mid);">*</span>
+                    are required.
+                </span>
+            </div>
+
+            <div class="card-body">
+
+                <form method="POST"
+                      action="{{ url_for('learner.profile') }}"
+                      id="profileForm"
+                      novalidate>
+
+                    <input type="hidden"
+                           name="csrf_token"
+                           value="{{ csrf_token() }}">
+
+                    {# Personal Information Section #}
+                    <div style="margin-bottom:1.5rem;">
+                        <div class="section-heading">
+                            👤 Personal Information
+                        </div>
+
+                        <div class="form-group">
+                            <label for="full_name" class="form-label">
+                                <span class="label-icon">👤</span>
+                                Full Name
+                                <span class="required">*</span>
+                            </label>
+                            <input type="text"
+                                   id="full_name"
+                                   name="full_name"
+                                   class="form-control"
+                                   placeholder="Your full name"
+                                   value="{{ current_user.full_name or '' }}"
+                                   required
+                                   maxlength="150">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="phone_number"
+                                       class="form-label">
+                                    <span class="label-icon">📱</span>
+                                    Phone Number
+                                    <span class="optional">(optional)</span>
+                                </label>
+                                <input type="tel"
+                                       id="phone_number"
+                                       name="phone_number"
+                                       class="form-control"
+                                       placeholder="e.g. 08012345678"
+                                       value="{{ current_user.phone_number or '' }}"
+                                       maxlength="20">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="state" class="form-label">
+                                    <span class="label-icon">📍</span>
+                                    State
+                                </label>
+                                <select id="state"
+                                        name="state"
+                                        class="form-control">
+                                    <option value="">— Select State —</option>
+                                    {% set ng_states = [
+                                        'Abia','Adamawa','Akwa Ibom',
+                                        'Anambra','Bauchi','Bayelsa',
+                                        'Benue','Borno','Cross River',
+                                        'Delta','Ebonyi','Edo','Ekiti',
+                                        'Enugu','FCT-Abuja','Gombe',
+                                        'Imo','Jigawa','Kaduna','Kano',
+                                        'Katsina','Kebbi','Kogi','Kwara',
+                                        'Lagos','Nasarawa','Niger','Ogun',
+                                        'Ondo','Osun','Oyo','Plateau',
+                                        'Rivers','Sokoto','Taraba',
+                                        'Yobe','Zamfara'
+                                    ] %}
+                                    {% for st in ng_states %}
+                                    <option value="{{ st }}"
+                                        {% if current_user.state == st %}
+                                            selected{% endif %}>
+                                        {{ st }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="country" class="form-label">
+                                <span class="label-icon">🌍</span>
+                                Country
+                            </label>
+                            <select id="country"
+                                    name="country"
+                                    class="form-control">
+                                {% for c in ['Nigeria','Ghana','Kenya',
+                                             'South Africa','Other'] %}
+                                <option value="{{ c }}"
+                                    {% if current_user.country == c or
+                                          (not current_user.country and
+                                           c == 'Nigeria') %}
+                                        selected{% endif %}>
+                                    {{ c }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                    </div>
+
+                    {# Bio Section #}
+                    <div style="margin-bottom:1.5rem;">
+                        <div class="section-heading">
+                            📝 About You
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bio" class="form-label">
+                                <span class="label-icon">📋</span>
+                                Short Bio
+                                <span class="optional">(optional)</span>
+                            </label>
+                            <textarea id="bio"
+                                      name="bio"
+                                      class="form-control"
+                                      rows="3"
+                                      placeholder="Tell us a little about yourself..."
+                                      data-max-chars="500"
+                                      maxlength="500">{{ current_user.bio or '' }}</textarea>
+                            <div style="display:flex;
+                                        justify-content:space-between;
+                                        margin-top:0.375rem;">
+                                <span class="form-text">
+                                    A brief introduction shown on your profile.
+                                </span>
+                                <span class="char-counter"></span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="farming_background"
+                                   class="form-label">
+                                <span class="label-icon">🌾</span>
+                                Farming Background
+                                <span class="optional">(optional)</span>
+                            </label>
+                            <textarea id="farming_background"
+                                      name="farming_background"
+                                      class="form-control"
+                                      rows="3"
+                                      placeholder="Describe your farming experience, the crops you grow, livestock you keep, or your agricultural goals..."
+                                      data-max-chars="1000"
+                                      maxlength="1000">{{ current_user.farming_background or '' }}</textarea>
+                            <div style="display:flex;
+                                        justify-content:space-between;
+                                        margin-top:0.375rem;">
+                                <span class="form-text">
+                                    Share your agricultural experience and goals.
+                                </span>
+                                <span class="char-counter"></span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {# Save Button #}
+                    <div style="display:flex;
+                                align-items:center;
+                                gap:1rem;
+                                flex-wrap:wrap;
+                                padding-top:0.5rem;
+                                border-top:1px solid var(--color-border);">
+                        <button type="submit"
+                                class="btn btn-primary btn-lg"
+                                id="saveProfileBtn">
+                            💾 Save Profile
+                        </button>
+                        <a href="{{ url_for('learner.dashboard') }}"
+                           class="btn btn-light btn-lg">
+                            Cancel
+                        </a>
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+        {# end edit profile form #}
+
+
+        {# ── Change Password Section ── #}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    🔐 Change Password
+                </h2>
+            </div>
+
+            <div class="card-body">
+
+                <div class="alert alert-info alert-inline"
+                     style="margin-bottom:1.25rem;">
+                    <span class="alert-icon">ℹ️</span>
+                    <div class="alert-content">
+                        <p class="alert-text">
+                            Password changes are not yet available
+                            in this version. Please contact the
+                            administrator at
+                            <strong>admin@agrilms.com</strong>
+                            to reset your password.
+                        </p>
+                    </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;
+                            gap:0.875rem;">
+
+                    <div class="form-group">
+                        <label class="form-label">Current Password</label>
+                        <input type="password"
+                               class="form-control"
+                               placeholder="••••••••"
+                               disabled>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">
+                                New Password
+                            </label>
+                            <input type="password"
+                                   class="form-control"
+                                   placeholder="••••••••"
+                                   disabled>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                Confirm New Password
+                            </label>
+                            <input type="password"
+                                   class="form-control"
+                                   placeholder="••••••••"
+                                   disabled>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-outline-primary"
+                            disabled
+                            title="Coming soon">
+                        Update Password
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+        {# end change password #}
+
+
+        {# ── Account Activity ── #}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    📊 Recent Learning Activity
+                </h2>
+                <a href="{{ url_for('learner.progress') }}"
+                   class="btn btn-outline-primary btn-sm">
+                    Full Progress
+                </a>
+            </div>
+
+            <div class="card-body compact">
+
+                {% set recent_enrollments = current_user.enrollments.order_by(
+                    db.text('date_enrolled DESC')
+                ).limit(4).all() if current_user.enrollments else [] %}
+
+                {% if recent_enrollments %}
+                <div style="display:flex;flex-direction:column;gap:0.875rem;">
+                    {% for enrollment in recent_enrollments %}
+                    <div style="display:flex;align-items:center;
+                                gap:0.875rem;padding:0.75rem;
+                                background:var(--gray-50);
+                                border-radius:0.75rem;
+                                border:1px solid var(--color-border);">
+
+                        <div style="width:44px;height:44px;
+                                    border-radius:0.625rem;
+                                    background:var(--green-ghost);
+                                    display:flex;align-items:center;
+                                    justify-content:center;
+                                    font-size:1.4rem;flex-shrink:0;">
+                            📚
+                        </div>
+
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:600;font-size:0.875rem;
+                                        color:var(--gray-800);
+                                        white-space:nowrap;overflow:hidden;
+                                        text-overflow:ellipsis;">
+                                {{ enrollment.course.title
+                                   if enrollment.course else 'Course' }}
+                            </div>
+                            <div style="display:flex;align-items:center;
+                                        gap:0.5rem;margin-top:3px;">
+                                <div class="progress progress-xs"
+                                     style="flex:1;max-width:100px;">
+                                    <div class="progress-bar bar-green"
+                                         style="width:{{ enrollment.progress_percent or 0 }}%;">
+                                    </div>
+                                </div>
+                                <span style="font-size:0.7rem;
+                                             font-weight:700;
+                                             color:var(--green-dark);">
+                                    {{ enrollment.progress_percent | int or 0 }}%
+                                </span>
+                            </div>
+                        </div>
+
+                        <span class="badge
+                            {% if enrollment.is_completed %}badge-success
+                            {% else %}badge-primary{% endif %}"
+                              style="flex-shrink:0;font-size:0.65rem;">
+                            {% if enrollment.is_completed %}Done
+                            {% else %}Active{% endif %}
+                        </span>
+
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state" style="min-height:120px;">
+                    <span style="font-size:2rem;">📚</span>
+                    <p class="empty-state-text"
+                       style="margin-top:0.5rem;font-size:0.8rem;">
+                        No courses enrolled yet.
+                        <a href="{{ url_for('courses.catalog') }}"
+                           style="color:var(--green-mid);">
+                            Browse courses →
+                        </a>
+                    </p>
+                </div>
+                {% endif %}
+
+            </div>
+
+        </div>
+        {# end recent activity #}
+
+
+    </div>
+    {# end right column #}
+
+
+</div>
+{# end profile grid #}
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+'use strict';
+
+/* ── Responsive grid ─────────────────────────────────────── */
+(function() {
+    const grid = document.getElementById('profileGrid');
+    if (!grid) return;
+    function adj() {
+        grid.style.gridTemplateColumns =
+            window.innerWidth <= 768 ? '1fr' : '300px 1fr';
+    }
+    adj();
+    window.addEventListener('resize', adj);
+})();
+
+/* ── Quick link hover ────────────────────────────────────── */
+document.querySelectorAll('.profile-quick-link').forEach(function(link) {
+    link.addEventListener('mouseenter', function() {
+        this.style.background = 'var(--green-ghost)';
+    });
+    link.addEventListener('mouseleave', function() {
+        this.style.background = '';
+    });
+});
+
+/* ── Form save loading state ─────────────────────────────── */
+(function() {
+    const form = document.getElementById('profileForm');
+    const btn  = document.getElementById('saveProfileBtn');
+    if (!form || !btn) return;
+    form.addEventListener('submit', function() {
+        btn.disabled    = true;
+        btn.textContent = '💾 Saving...';
+        btn.classList.add('loading');
+    });
+})();
+</script>
+{% endblock %}

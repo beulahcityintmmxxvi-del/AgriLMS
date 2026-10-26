@@ -1,5 +1,1188 @@
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>Admin</title></head>
-<body><h1>Admin Dashboard — Coming Soon</h1><a href="/">Home</a></body>
-</html>
+{% extends 'base.html' %}
+
+{# ============================================================
+   Agri LMS — Admin Dashboard
+   ============================================================
+   File    : app/templates/admin/dashboard.html
+   Purpose : Main administrator dashboard showing:
+               - Platform-wide statistics
+               - Quick management actions
+               - Recent user registrations
+               - Pending grading queue
+               - Top courses by enrollment
+               - Monthly enrollment trend chart
+               - User registration trend chart
+               - Submission status breakdown chart
+   ============================================================ #}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+
+{# ── Admin Welcome Banner ──────────────────────────────────── #}
+<div style="background: linear-gradient(
+                135deg,
+                var(--gray-900) 0%,
+                #1a2f3e 50%,
+                #1b4332 100%
+            );
+            border-radius: 1.25rem;
+            padding: 2rem 2.5rem;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 2rem;">
+
+    {# Decorative background circles #}
+    <div aria-hidden="true"
+         style="position: absolute;
+                top: -60px; right: -60px;
+                width: 200px; height: 200px;
+                border-radius: 50%;
+                background: rgba(255,255,255,0.04);">
+    </div>
+    <div aria-hidden="true"
+         style="position: absolute;
+                bottom: -40px; right: 160px;
+                width: 140px; height: 140px;
+                border-radius: 50%;
+                background: rgba(255,255,255,0.03);">
+    </div>
+
+    <div style="position: relative;
+                z-index: 1;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 1.5rem;">
+
+        <div>
+            <div style="font-size: 0.75rem;
+                        font-weight: 700;
+                        color: rgba(255,255,255,0.55);
+                        text-transform: uppercase;
+                        letter-spacing: 0.1em;
+                        margin-bottom: 0.5rem;">
+                Administrator Console
+            </div>
+            <h1 style="font-size: 1.75rem;
+                       font-weight: 900;
+                       color: white;
+                       margin-bottom: 0.5rem;
+                       line-height: 1.2;">
+                Welcome, {{ current_user.full_name.split()[0] }} 🛡️
+            </h1>
+            <p style="color: rgba(255,255,255,0.65);
+                      font-size: 0.9375rem;
+                      margin: 0;
+                      line-height: 1.5;">
+                {{ current_time.strftime('%A, %d %B %Y') }} —
+                Platform is running normally.
+                {% if pending_grading > 0 %}
+                <span style="color: var(--gold-light);
+                             font-weight: 700;">
+                    ⚠️ {{ pending_grading }}
+                    submission{{ 's' if pending_grading != 1 }}
+                    awaiting grading.
+                </span>
+                {% endif %}
+            </p>
+        </div>
+
+        {# System health badges #}
+        <div style="display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    flex-wrap: wrap;">
+
+            <div style="background: rgba(255,255,255,0.1);
+                        padding: 0.5rem 1rem;
+                        border-radius: 2rem;
+                        font-size: 0.8125rem;
+                        color: rgba(255,255,255,0.85);
+                        display: flex;
+                        align-items: center;
+                        gap: 0.4rem;">
+                <span style="width: 8px; height: 8px;
+                             background: #40c057;
+                             border-radius: 50%;
+                             display: inline-block;
+                             animation: pulse-dot 2s infinite;">
+                </span>
+                System Online
+            </div>
+
+            <div style="background: rgba(255,255,255,0.1);
+                        padding: 0.5rem 1rem;
+                        border-radius: 2rem;
+                        font-size: 0.8125rem;
+                        color: rgba(255,255,255,0.85);">
+                🗄️ DB Connected
+            </div>
+
+            <div style="background: rgba(255,255,255,0.1);
+                        padding: 0.5rem 1rem;
+                        border-radius: 2rem;
+                        font-size: 0.8125rem;
+                        color: rgba(255,255,255,0.85);">
+                👥 {{ active_users }} Active Users
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{# end admin welcome banner #}
+
+
+{# ── Primary Stats Row ─────────────────────────────────────── #}
+<div class="dashboard-grid cols-4" style="margin-bottom: 1.5rem;">
+
+    {# Total Users #}
+    <div class="stat-card stat-green">
+        <div class="stat-card-icon">👥</div>
+        <div class="stat-card-content">
+            <div class="stat-card-value">{{ total_users }}</div>
+            <div class="stat-card-label">Total Users</div>
+            <span class="stat-card-change
+                {% if new_users_7d > 0 %}positive{% else %}neutral{% endif %}">
+                +{{ new_users_7d }} this week
+            </span>
+        </div>
+        <span class="stat-card-bg" aria-hidden="true">👥</span>
+    </div>
+
+    {# Total Courses #}
+    <div class="stat-card stat-blue">
+        <div class="stat-card-icon">📚</div>
+        <div class="stat-card-content">
+            <div class="stat-card-value">{{ total_courses }}</div>
+            <div class="stat-card-label">Total Courses</div>
+            <span class="stat-card-change
+                {% if published_courses > 0 %}positive{% else %}neutral{% endif %}">
+                {{ published_courses }} published
+            </span>
+        </div>
+        <span class="stat-card-bg" aria-hidden="true">📚</span>
+    </div>
+
+    {# Total Enrollments #}
+    <div class="stat-card stat-gold">
+        <div class="stat-card-icon">🎓</div>
+        <div class="stat-card-content">
+            <div class="stat-card-value">{{ total_enrollments }}</div>
+            <div class="stat-card-label">Total Enrollments</div>
+            <span class="stat-card-change
+                {% if completion_rate > 0 %}positive{% else %}neutral{% endif %}">
+                {{ completion_rate }}% completion
+            </span>
+        </div>
+        <span class="stat-card-bg" aria-hidden="true">🎓</span>
+    </div>
+
+    {# Pending Grading #}
+    <div class="stat-card {% if pending_grading > 0 %}stat-orange{% else %}stat-green{% endif %}">
+        <div class="stat-card-icon">📝</div>
+        <div class="stat-card-content">
+            <div class="stat-card-value">{{ pending_grading }}</div>
+            <div class="stat-card-label">Awaiting Grading</div>
+            <span class="stat-card-change
+                {% if pending_grading > 0 %}negative{% else %}positive{% endif %}">
+                {% if pending_grading > 0 %}
+                    Action needed
+                {% else %}
+                    All graded ✅
+                {% endif %}
+            </span>
+        </div>
+        <span class="stat-card-bg" aria-hidden="true">📝</span>
+    </div>
+
+</div>
+{# end primary stats #}
+
+
+{# ── Secondary Stats Row ───────────────────────────────────── #}
+<div class="dashboard-grid cols-4" style="margin-bottom: 2rem;">
+
+    <div class="card" style="padding: 1.25rem 1.5rem;">
+        <div style="display: flex;
+                    align-items: center;
+                    justify-content: space-between;">
+            <div>
+                <div style="font-size: 0.75rem;
+                            font-weight: 600;
+                            color: var(--gray-400);
+                            text-transform: uppercase;
+                            letter-spacing: 0.06em;
+                            margin-bottom: 0.25rem;">
+                    Total Learners
+                </div>
+                <div style="font-size: 1.75rem;
+                            font-weight: 900;
+                            color: var(--green-dark);">
+                    {{ total_learners }}
+                </div>
+            </div>
+            <span style="font-size: 2rem;">🌱</span>
+        </div>
+        <div style="font-size: 0.75rem;
+                    color: var(--gray-400);
+                    margin-top: 0.5rem;">
+            +{{ new_users_30d }} in last 30 days
+        </div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem 1.5rem;">
+        <div style="display: flex;
+                    align-items: center;
+                    justify-content: space-between;">
+            <div>
+                <div style="font-size: 0.75rem;
+                            font-weight: 600;
+                            color: var(--gray-400);
+                            text-transform: uppercase;
+                            letter-spacing: 0.06em;
+                            margin-bottom: 0.25rem;">
+                    Total Modules
+                </div>
+                <div style="font-size: 1.75rem;
+                            font-weight: 900;
+                            color: var(--blue-dark);">
+                    {{ total_modules }}
+                </div>
+            </div>
+            <span style="font-size: 2rem;">📖</span>
+        </div>
+        <div style="font-size: 0.75rem;
+                    color: var(--gray-400);
+                    margin-top: 0.5rem;">
+            Across {{ total_courses }} courses
+        </div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem 1.5rem;">
+        <div style="display: flex;
+                    align-items: center;
+                    justify-content: space-between;">
+            <div>
+                <div style="font-size: 0.75rem;
+                            font-weight: 600;
+                            color: var(--gray-400);
+                            text-transform: uppercase;
+                            letter-spacing: 0.06em;
+                            margin-bottom: 0.25rem;">
+                    Materials
+                </div>
+                <div style="font-size: 1.75rem;
+                            font-weight: 900;
+                            color: var(--gold-dark);">
+                    {{ total_materials }}
+                </div>
+            </div>
+            <span style="font-size: 2rem;">🎬</span>
+        </div>
+        <div style="font-size: 0.75rem;
+                    color: var(--gray-400);
+                    margin-top: 0.5rem;">
+            Videos, PDFs, documents
+        </div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem 1.5rem;">
+        <div style="display: flex;
+                    align-items: center;
+                    justify-content: space-between;">
+            <div>
+                <div style="font-size: 0.75rem;
+                            font-weight: 600;
+                            color: var(--gray-400);
+                            text-transform: uppercase;
+                            letter-spacing: 0.06em;
+                            margin-bottom: 0.25rem;">
+                    Certificates
+                </div>
+                <div style="font-size: 1.75rem;
+                            font-weight: 900;
+                            color: var(--orange-dark);">
+                    {{ certificates_issued }}
+                </div>
+            </div>
+            <span style="font-size: 2rem;">🏆</span>
+        </div>
+        <div style="font-size: 0.75rem;
+                    color: var(--gray-400);
+                    margin-top: 0.5rem;">
+            Issued to learners
+        </div>
+    </div>
+
+</div>
+{# end secondary stats #}
+
+
+{# ── Quick Admin Actions ───────────────────────────────────── #}
+<div style="margin-bottom: 2rem;">
+
+    <div class="dashboard-section-header">
+        <h2 class="dashboard-section-title">⚡ Quick Actions</h2>
+    </div>
+
+    <div class="quick-actions">
+
+        <a href="{{ url_for('admin.courses') }}"
+           class="quick-action-btn"
+           aria-label="Manage courses">
+            <div class="quick-action-icon">📚</div>
+            <span class="quick-action-label">Manage Courses</span>
+        </a>
+
+        <a href="{{ url_for('admin.modules') }}"
+           class="quick-action-btn action-blue"
+           aria-label="Manage modules">
+            <div class="quick-action-icon">📖</div>
+            <span class="quick-action-label">Manage Modules</span>
+        </a>
+
+        <a href="{{ url_for('admin.materials') }}"
+           class="quick-action-btn action-gold"
+           aria-label="Upload materials">
+            <div class="quick-action-icon">🎬</div>
+            <span class="quick-action-label">Upload Materials</span>
+        </a>
+
+        <a href="{{ url_for('admin.assignments') }}"
+           class="quick-action-btn action-orange"
+           aria-label="Manage assignments">
+            <div class="quick-action-icon">📝</div>
+            <span class="quick-action-label">Assignments</span>
+        </a>
+
+        <a href="{{ url_for('admin.submissions') }}?filter=pending"
+           class="quick-action-btn action-red"
+           aria-label="Grade pending submissions"
+           style="position: relative;">
+            <div class="quick-action-icon"
+                 style="background: var(--red-ghost);">
+                📥
+            </div>
+            <span class="quick-action-label">Grade Submissions</span>
+            {% if pending_grading > 0 %}
+            <span style="position: absolute;
+                         top: 0.5rem; right: 0.5rem;
+                         background: var(--red-mid);
+                         color: white;
+                         font-size: 0.65rem;
+                         font-weight: 700;
+                         padding: 2px 6px;
+                         border-radius: 999px;
+                         min-width: 20px;
+                         text-align: center;">
+                {{ pending_grading }}
+            </span>
+            {% endif %}
+        </a>
+
+        <a href="{{ url_for('admin.users') }}"
+           class="quick-action-btn"
+           aria-label="Manage users">
+            <div class="quick-action-icon">👥</div>
+            <span class="quick-action-label">Manage Users</span>
+        </a>
+
+        <a href="{{ url_for('admin.reports') }}"
+           class="quick-action-btn action-blue"
+           aria-label="View platform reports">
+            <div class="quick-action-icon"
+                 style="background: var(--blue-ghost);">
+                📊
+            </div>
+            <span class="quick-action-label">Reports</span>
+        </a>
+
+    </div>
+
+</div>
+{# end quick actions #}
+
+
+{# ── Main Dashboard Grid ───────────────────────────────────── #}
+<div style="display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 1.5rem;
+            align-items: flex-start;"
+     id="adminMainGrid">
+
+    {# ══ LEFT COLUMN ══════════════════════════════════════════ #}
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+
+        {# ── Monthly Enrollment Chart ── #}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    📈 Monthly Enrollment Trend
+                </h2>
+                <span style="font-size: 0.8125rem;
+                             color: var(--gray-400);">
+                    Last 6 months
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="chart-container chart-md">
+                    <canvas id="enrollmentTrendChart"
+                            aria-label="Monthly enrollment trend chart"
+                            role="img">
+                    </canvas>
+                </div>
+            </div>
+        </div>
+
+
+        {# ── Recent Registrations Table ── #}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    🆕 Recent Registrations
+                </h2>
+                <div class="card-header-actions">
+                    <a href="{{ url_for('admin.users') }}"
+                       class="btn btn-outline-primary btn-sm">
+                        View All Users
+                    </a>
+                </div>
+            </div>
+
+            {% if recent_users %}
+            <div class="table-wrapper"
+                 style="border-radius: 0; border: none; box-shadow: none;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Location</th>
+                            <th>Registered</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in recent_users %}
+                        <tr>
+                            <td>
+                                <div class="cell-avatar">
+                                    <div class="cell-avatar-img"
+                                         style="background: var(--green-mid);">
+                                        {{ user.full_name[0].upper()
+                                           if user.full_name else '?' }}
+                                    </div>
+                                    <div>
+                                        <div class="cell-avatar-name">
+                                            {{ user.full_name }}
+                                        </div>
+                                        <div class="cell-avatar-sub">
+                                            {{ user.email }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge
+                                    {% if user.role == 'admin' %}badge-solid-green
+                                    {% else %}badge-primary{% endif %}">
+                                    {{ user.role | capitalize }}
+                                </span>
+                            </td>
+                            <td style="font-size: 0.8125rem;
+                                       color: var(--gray-500);">
+                                {{ user.state + ', ' if user.state else '' }}
+                                {{ user.country or '—' }}
+                            </td>
+                            <td style="font-size: 0.8125rem;
+                                       color: var(--gray-500);
+                                       white-space: nowrap;">
+                                {{ user.date_registered | dateformat('%d %b %Y') }}
+                            </td>
+                            <td>
+                                <span class="badge
+                                    {% if user.is_active %}badge-success
+                                    {% else %}badge-danger{% endif %}">
+                                    {% if user.is_active %}Active
+                                    {% else %}Inactive{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% else %}
+            <div class="card-body">
+                <div class="empty-state" style="min-height: 150px;">
+                    <span class="empty-state-illustration"
+                          style="font-size: 2.5rem;">👥</span>
+                    <p class="empty-state-text">
+                        No users registered yet.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+        {# end recent registrations #}
+
+
+        {# ── Pending Submissions Table ── #}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    📥 Submissions Awaiting Grading
+                    {% if pending_grading > 0 %}
+                    <span class="badge badge-solid-orange badge-sm ml-2">
+                        {{ pending_grading }}
+                    </span>
+                    {% endif %}
+                </h2>
+                <div class="card-header-actions">
+                    <a href="{{ url_for('admin.submissions') }}?filter=pending"
+                       class="btn btn-warning btn-sm">
+                        Grade All
+                    </a>
+                </div>
+            </div>
+
+            {% if pending_submissions %}
+            <div class="table-wrapper"
+                 style="border-radius: 0; border: none; box-shadow: none;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Learner</th>
+                            <th>Assignment</th>
+                            <th>Type</th>
+                            <th>Submitted</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for submission in pending_submissions %}
+                        <tr>
+                            <td>
+                                <div class="cell-avatar">
+                                    <div class="cell-avatar-img"
+                                         style="background: var(--blue-mid);">
+                                        {{ submission.learner.full_name[0].upper()
+                                           if submission.learner else '?' }}
+                                    </div>
+                                    <div class="cell-avatar-name">
+                                        {{ submission.learner.full_name
+                                           if submission.learner else 'Unknown' }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="font-size: 0.8125rem;
+                                       max-width: 180px;">
+                                <div style="white-space: nowrap;
+                                            overflow: hidden;
+                                            text-overflow: ellipsis;
+                                            font-weight: 600;
+                                            color: var(--gray-800);">
+                                    {{ submission.assignment.title
+                                       if submission.assignment else 'N/A' }}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge badge-light badge-sm">
+                                    {{ submission.get_submission_type_display() }}
+                                </span>
+                                {% if submission.is_late %}
+                                <span class="badge badge-orange badge-sm">
+                                    Late
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size: 0.8125rem;
+                                       color: var(--gray-500);
+                                       white-space: nowrap;">
+                                {{ submission.date_submitted | dateformat('%d %b %Y') }}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('admin.submissions') }}"
+                                   class="btn btn-primary btn-xs">
+                                    Grade
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% else %}
+            <div class="card-body">
+                <div class="empty-state" style="min-height: 120px;">
+                    <span style="font-size: 2.5rem;">✅</span>
+                    <p class="empty-state-text"
+                       style="margin-top: 0.75rem;">
+                        No submissions awaiting grading. All caught up!
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+        {# end pending submissions #}
+
+    </div>
+    {# end left column #}
+
+
+    {# ══ RIGHT COLUMN ═════════════════════════════════════════ #}
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+
+        {# ── User Registration Trend Chart ── #}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    👥 New Registrations
+                </h2>
+                <span style="font-size: 0.8rem;
+                             color: var(--gray-400);">
+                    Last 7 days
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="chart-container chart-sm">
+                    <canvas id="registrationChart"
+                            aria-label="User registration trend chart"
+                            role="img">
+                    </canvas>
+                </div>
+            </div>
+        </div>
+
+
+        {# ── Submission Status Doughnut ── #}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    📊 Submission Status
+                </h2>
+            </div>
+            <div class="card-body" style="text-align: center;">
+
+                {% set total_subs = submission_status.pending +
+                                    submission_status.graded +
+                                    submission_status.returned %}
+
+                {% if total_subs > 0 %}
+                    <div class="chart-container"
+                         style="max-height: 180px; margin-bottom: 1rem;">
+                        <canvas id="submissionStatusChart"
+                                aria-label="Submission status chart"
+                                role="img">
+                        </canvas>
+                    </div>
+
+                    {# Legend #}
+                    <div style="display: flex;
+                                flex-direction: column;
+                                gap: 0.5rem;
+                                text-align: left;">
+
+                        {% set status_items = [
+                            ('Pending',  submission_status.pending,  'var(--orange-mid)'),
+                            ('Graded',   submission_status.graded,   'var(--green-mid)'),
+                            ('Returned', submission_status.returned, 'var(--red-mid)'),
+                        ] %}
+
+                        {% for label, count, color in status_items %}
+                        <div style="display: flex;
+                                    align-items: center;
+                                    justify-content: space-between;">
+                            <div style="display: flex;
+                                        align-items: center;
+                                        gap: 0.5rem;">
+                                <div style="width: 10px; height: 10px;
+                                            border-radius: 50%;
+                                            background: {{ color }};
+                                            flex-shrink: 0;"></div>
+                                <span style="font-size: 0.8125rem;
+                                             color: var(--gray-600);">
+                                    {{ label }}
+                                </span>
+                            </div>
+                            <span style="font-size: 0.875rem;
+                                         font-weight: 700;
+                                         color: var(--gray-800);">
+                                {{ count }}
+                            </span>
+                        </div>
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+                    <div style="padding: 2rem 0; color: var(--gray-400);">
+                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">
+                            📭
+                        </div>
+                        <p style="font-size: 0.875rem; margin: 0;">
+                            No submissions yet.
+                        </p>
+                    </div>
+                {% endif %}
+
+            </div>
+        </div>
+        {# end submission status #}
+
+
+        {# ── Top Courses by Enrollment ── #}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    🏆 Top Courses
+                </h2>
+                <span style="font-size: 0.8rem;
+                             color: var(--gray-400);">
+                    By enrollment
+                </span>
+            </div>
+
+            <div class="card-body compact">
+
+                {% if top_courses %}
+
+                    <div style="display: flex;
+                                flex-direction: column;
+                                gap: 0.875rem;">
+
+                        {% for course, count in top_courses %}
+                        <div style="display: flex;
+                                    align-items: center;
+                                    gap: 0.875rem;">
+
+                            {# Rank number #}
+                            <div style="width: 28px;
+                                        height: 28px;
+                                        border-radius: 50%;
+                                        background:
+                                        {% if loop.index == 1 %}var(--gold-mid)
+                                        {% elif loop.index == 2 %}var(--gray-300)
+                                        {% elif loop.index == 3 %}#cd7f32
+                                        {% else %}var(--gray-100){% endif %};
+                                        color:
+                                        {% if loop.index <= 3 %}white
+                                        {% else %}var(--gray-500){% endif %};
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        font-size: 0.75rem;
+                                        font-weight: 800;
+                                        flex-shrink: 0;">
+                                {{ loop.index }}
+                            </div>
+
+                            {# Course info + bar #}
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-size: 0.8125rem;
+                                            font-weight: 600;
+                                            color: var(--gray-800);
+                                            white-space: nowrap;
+                                            overflow: hidden;
+                                            text-overflow: ellipsis;
+                                            margin-bottom: 4px;">
+                                    {{ course.title }}
+                                </div>
+                                <div style="height: 5px;
+                                            background: var(--gray-100);
+                                            border-radius: 999px;
+                                            overflow: hidden;">
+                                    <div style="height: 100%;
+                                                border-radius: 999px;
+                                                background: var(--green-mid);
+                                                width: {% if top_courses[0][1] > 0 %}
+                                                    {{ (count / top_courses[0][1] * 100) | int }}%
+                                                {% else %}0%{% endif %};
+                                                transition: width 0.8s ease;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            {# Enrollment count #}
+                            <div style="font-size: 0.875rem;
+                                        font-weight: 800;
+                                        color: var(--green-dark);
+                                        flex-shrink: 0;
+                                        min-width: 28px;
+                                        text-align: right;">
+                                {{ count }}
+                            </div>
+
+                        </div>
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <div style="text-align: center;
+                                padding: 1.5rem;
+                                color: var(--gray-400);">
+                        <div style="font-size: 2rem;
+                                    margin-bottom: 0.5rem;">📚</div>
+                        <p style="font-size: 0.8125rem; margin: 0;">
+                            No courses created yet.
+                        </p>
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+        {# end top courses #}
+
+
+        {# ── Platform Content Summary ── #}
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-header-title">
+                    🗂️ Content Summary
+                </h2>
+            </div>
+
+            <div class="card-body compact">
+
+                {% set content_items = [
+                    ('📚', 'Published Courses', published_courses,
+                     url_for('admin.courses'), 'var(--green-ghost)', 'var(--green-dark)'),
+                    ('📄', 'Draft Courses',    draft_courses,
+                     url_for('admin.courses'), 'var(--gray-100)',    'var(--gray-600)'),
+                    ('📖', 'Total Modules',    total_modules,
+                     url_for('admin.modules'), 'var(--blue-ghost)',  'var(--blue-dark)'),
+                    ('🎬', 'Materials',        total_materials,
+                     url_for('admin.materials'),'var(--gold-ghost)', 'var(--gold-dark)'),
+                    ('📝', 'Assignments',      total_assignments,
+                     url_for('admin.assignments'),'var(--orange-ghost)','var(--orange-dark)'),
+                ] %}
+
+                <div style="display: flex;
+                            flex-direction: column;
+                            gap: 0.625rem;">
+
+                    {% for icon, label, count, link, bg, color in content_items %}
+                    <a href="{{ link }}"
+                       style="display: flex;
+                              align-items: center;
+                              justify-content: space-between;
+                              padding: 0.625rem 0.875rem;
+                              background: {{ bg }};
+                              border-radius: 0.625rem;
+                              text-decoration: none;
+                              transition: opacity 0.2s;">
+
+                        <div style="display: flex;
+                                    align-items: center;
+                                    gap: 0.625rem;">
+                            <span style="font-size: 1.1rem;">{{ icon }}</span>
+                            <span style="font-size: 0.8125rem;
+                                         font-weight: 600;
+                                         color: var(--gray-700);">
+                                {{ label }}
+                            </span>
+                        </div>
+
+                        <span style="font-size: 1rem;
+                                     font-weight: 800;
+                                     color: {{ color }};">
+                            {{ count }}
+                        </span>
+
+                    </a>
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </div>
+        {# end content summary #}
+
+
+    </div>
+    {# end right column #}
+
+</div>
+{# end main grid #}
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+/* =============================================================
+   Admin Dashboard — Chart.js Visualizations
+   Renders:
+       1. Monthly Enrollment Trend Line Chart
+       2. User Registration Trend Bar Chart
+       3. Submission Status Doughnut Chart
+   ============================================================= */
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    /* ── Chart data from Flask template ─────────────────────── */
+    const monthlyLabels      = {{ monthly_labels      | tojson }};
+    const monthlyEnrollments = {{ monthly_enrollments | tojson }};
+    const regLabels          = {{ reg_labels          | tojson }};
+    const regCounts          = {{ reg_counts          | tojson }};
+
+    const subStatus = {
+        pending:  {{ submission_status.pending }},
+        graded:   {{ submission_status.graded }},
+        returned: {{ submission_status.returned }},
+    };
+
+
+    /* ── 1. MONTHLY ENROLLMENT TREND — LINE CHART ────────────── */
+    const enrollCtx = document.getElementById('enrollmentTrendChart');
+
+    if (enrollCtx) {
+        new Chart(enrollCtx, {
+            type: 'line',
+            data: {
+                labels: monthlyLabels,
+                datasets: [{
+                    label: 'New Enrollments',
+                    data: monthlyEnrollments,
+                    borderColor:     '#2d6a4f',
+                    backgroundColor: function(context) {
+                        const chart = context.chart;
+                        const { ctx, chartArea } = chart;
+                        if (!chartArea) return 'rgba(45,106,79,0.1)';
+                        const gradient = ctx.createLinearGradient(
+                            0, chartArea.top, 0, chartArea.bottom
+                        );
+                        gradient.addColorStop(0, 'rgba(45,106,79,0.3)');
+                        gradient.addColorStop(1, 'rgba(45,106,79,0.01)');
+                        return gradient;
+                    },
+                    borderWidth:  2.5,
+                    pointBackgroundColor:  '#2d6a4f',
+                    pointBorderColor:      '#fff',
+                    pointBorderWidth:      2,
+                    pointRadius:           5,
+                    pointHoverRadius:      7,
+                    fill:        true,
+                    tension:     0.4,
+                }]
+            },
+            options: {
+                responsive:          true,
+                maintainAspectRatio: true,
+                interaction: {
+                    mode:      'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const v = context.parsed.y;
+                                return ' ' + v +
+                                    ' enrollment' + (v !== 1 ? 's' : '');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize:  1,
+                            precision: 0,
+                            color:     '#6c757d',
+                        },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#6c757d',
+                            font: { size: 11, weight: '600' }
+                        },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+
+    /* ── 2. REGISTRATION TREND — BAR CHART ───────────────────── */
+    const regCtx = document.getElementById('registrationChart');
+
+    if (regCtx) {
+        new Chart(regCtx, {
+            type: 'bar',
+            data: {
+                labels: regLabels,
+                datasets: [{
+                    label: 'New Users',
+                    data: regCounts,
+                    backgroundColor: 'rgba(25, 118, 210, 0.75)',
+                    borderColor:     'rgba(25, 118, 210, 1)',
+                    borderWidth:     2,
+                    borderRadius:    6,
+                    borderSkipped:   false,
+                    hoverBackgroundColor: 'rgba(25, 118, 210, 0.95)',
+                }]
+            },
+            options: {
+                responsive:          true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const v = context.parsed.y;
+                                return ' ' + v +
+                                    ' new user' + (v !== 1 ? 's' : '');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize:  1,
+                            precision: 0,
+                            color:     '#6c757d',
+                        },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#6c757d',
+                            font: { size: 11, weight: '600' }
+                        },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+
+    /* ── 3. SUBMISSION STATUS — DOUGHNUT CHART ───────────────── */
+    const subCtx = document.getElementById('submissionStatusChart');
+
+    if (subCtx) {
+        const total = subStatus.pending +
+                      subStatus.graded +
+                      subStatus.returned;
+
+        if (total > 0) {
+            new Chart(subCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pending', 'Graded', 'Returned'],
+                    datasets: [{
+                        data: [
+                            subStatus.pending,
+                            subStatus.graded,
+                            subStatus.returned,
+                        ],
+                        backgroundColor: [
+                            'rgba(247, 103,   7, 0.85)',
+                            'rgba( 64, 145, 108, 0.85)',
+                            'rgba(224,  49,  49, 0.85)',
+                        ],
+                        borderColor: [
+                            '#f76707',
+                            '#40916c',
+                            '#e03131',
+                        ],
+                        borderWidth:  2,
+                        hoverOffset:  5,
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive:          true,
+                    maintainAspectRatio: true,
+                    cutout:              '65%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const v   = context.parsed;
+                                    const pct = Math.round(
+                                        (v / total) * 100
+                                    );
+                                    return ' ' + context.label +
+                                           ': ' + v +
+                                           ' (' + pct + '%)';
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'centerLabel',
+                    afterDraw: function(chart) {
+                        const { ctx, chartArea } = chart;
+                        if (!chartArea) return;
+
+                        const cx = (chartArea.left + chartArea.right) / 2;
+                        const cy = (chartArea.top + chartArea.bottom) / 2;
+
+                        ctx.save();
+                        ctx.font         = 'bold 20px Segoe UI, sans-serif';
+                        ctx.fillStyle    = '#212529';
+                        ctx.textAlign    = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(total, cx, cy - 8);
+
+                        ctx.font      = '11px Segoe UI, sans-serif';
+                        ctx.fillStyle = '#6c757d';
+                        ctx.fillText('Total', cx, cy + 10);
+                        ctx.restore();
+                    }
+                }]
+            });
+        }
+    }
+
+
+    /* ── 4. RESPONSIVE GRID ADJUSTMENT ──────────────────────── */
+    function adjustAdminGrid() {
+        const grid = document.getElementById('adminMainGrid');
+        if (!grid) return;
+
+        if (window.innerWidth <= 991) {
+            grid.style.gridTemplateColumns = '1fr';
+        } else {
+            grid.style.gridTemplateColumns = '1fr 380px';
+        }
+    }
+
+    adjustAdminGrid();
+    window.addEventListener('resize', adjustAdminGrid);
+
+});
+/* end DOMContentLoaded */
+</script>
+{% endblock %}

@@ -1,5 +1,679 @@
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>About</title></head>
-<body><h1>About Page — Coming Soon</h1><a href="/">Home</a></body>
-</html>
+{% extends 'base.html' %}
+
+{# ============================================================
+   Agri LMS — About Page
+   ============================================================
+   File    : app/templates/about.html
+   Purpose : Public-facing about page describing the platform,
+             its mission, objectives, technology stack,
+             the team behind it, and the impact it aims
+             to create for Nigerian and African farmers.
+   ============================================================ #}
+
+{% block title %}About Us — {{ app_name }}{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* About page uses full width — no sidebar offset */
+    body.has-sidebar .page-content { margin-left: 0 !important; }
+    body .page-content {
+        padding: 0 !important;
+        background: white !important;
+    }
+    body .app-body { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+
+{# ── Hero Section ──────────────────────────────────────────── #}
+<section style="background: linear-gradient(
+                    135deg,
+                    var(--green-darkest) 0%,
+                    var(--green-dark)    60%,
+                    var(--green-mid)     100%
+                );
+                padding: 5rem 0 4rem;
+                position: relative;
+                overflow: hidden;">
+
+    {# Decorative background circles #}
+    <div aria-hidden="true"
+         style="position:absolute;top:-80px;right:-80px;
+                width:320px;height:320px;border-radius:50%;
+                background:rgba(255,255,255,0.04);">
+    </div>
+    <div aria-hidden="true"
+         style="position:absolute;bottom:-60px;left:80px;
+                width:200px;height:200px;border-radius:50%;
+                background:rgba(255,255,255,0.03);">
+    </div>
+
+    <div class="container" style="position:relative;z-index:1;">
+
+        <div style="text-align:center;max-width:720px;margin:0 auto;">
+
+            <div style="font-size:4rem;margin-bottom:1.25rem;
+                        animation:float 5s ease-in-out infinite;">
+                🌿
+            </div>
+
+            <h1 style="font-size:clamp(2rem,5vw,3rem);
+                       font-weight:900;color:white;
+                       line-height:1.2;margin-bottom:1rem;">
+                About {{ app_name }}
+            </h1>
+
+            <p style="font-size:1.125rem;
+                      color:rgba(255,255,255,0.82);
+                      line-height:1.75;
+                      margin-bottom:2rem;
+                      max-width:600px;margin-left:auto;margin-right:auto;">
+                A modern digital platform dedicated to advancing
+                agricultural education, preserving indigenous farming
+                knowledge, and empowering farmers across Nigeria and
+                Africa through accessible online learning.
+            </p>
+
+            {# Quick stats strip #}
+            <div style="display:flex;
+                        justify-content:center;
+                        gap:2.5rem;
+                        flex-wrap:wrap;">
+                {% for value, label in [
+                    ('3+',  'Courses Published'),
+                    ('8+',  'Learning Modules'),
+                    ('6',   'Active Learners'),
+                    ('100%','Free to Enroll'),
+                ] %}
+                <div style="text-align:center;">
+                    <div style="font-size:1.75rem;font-weight:900;
+                                color:var(--gold-light);line-height:1;">
+                        {{ value }}
+                    </div>
+                    <div style="font-size:0.8rem;
+                                color:rgba(255,255,255,0.65);
+                                margin-top:3px;">
+                        {{ label }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+{# end hero #}
+
+
+{# ── Mission and Vision ────────────────────────────────────── #}
+<section style="padding:5rem 0;background:white;">
+    <div class="container">
+
+        <div style="display:grid;
+                    grid-template-columns:1fr 1fr;
+                    gap:3rem;
+                    align-items:center;"
+             id="missionGrid">
+
+            {# Mission text #}
+            <div>
+
+                <div style="display:inline-block;
+                            background:var(--green-ghost);
+                            color:var(--green-dark);
+                            padding:4px 16px;
+                            border-radius:999px;
+                            font-size:0.8rem;
+                            font-weight:700;
+                            text-transform:uppercase;
+                            letter-spacing:0.08em;
+                            margin-bottom:1rem;">
+                    Our Mission
+                </div>
+
+                <h2 style="font-size:2rem;font-weight:900;
+                           color:var(--gray-900);
+                           line-height:1.3;margin-bottom:1.25rem;">
+                    Democratizing Agricultural
+                    <span style="color:var(--green-dark);">
+                        Education for Every Farmer
+                    </span>
+                </h2>
+
+                <p style="font-size:0.9375rem;color:var(--gray-600);
+                          line-height:1.8;margin-bottom:1rem;">
+                    The Agri Learning Platform was created to bridge the
+                    knowledge gap between modern agricultural science and
+                    the millions of smallholder farmers who form the
+                    backbone of Nigeria's food production system.
+                </p>
+
+                <p style="font-size:0.9375rem;color:var(--gray-600);
+                          line-height:1.8;margin-bottom:1.5rem;">
+                    We believe that every farmer — regardless of location,
+                    education level, or economic background — deserves
+                    access to high-quality agricultural training that
+                    combines the best of modern science with the wisdom
+                    of generations of indigenous farming practice.
+                </p>
+
+                {# Mission points #}
+                <div style="display:flex;flex-direction:column;gap:0.875rem;">
+                    {% for point in [
+                        ('🎯', 'Provide free, accessible agricultural education online'),
+                        ('🌱', 'Preserve and promote indigenous farming knowledge'),
+                        ('📈', 'Improve farm productivity through evidence-based learning'),
+                        ('🤝', 'Connect farmers with extension knowledge and expertise'),
+                    ] %}
+                    <div style="display:flex;align-items:flex-start;
+                                gap:0.75rem;">
+                        <div style="width:36px;height:36px;
+                                    border-radius:50%;
+                                    background:var(--green-ghost);
+                                    display:flex;align-items:center;
+                                    justify-content:center;
+                                    font-size:1rem;flex-shrink:0;">
+                            {{ point[0] }}
+                        </div>
+                        <span style="font-size:0.9rem;
+                                     color:var(--gray-700);
+                                     line-height:1.55;
+                                     padding-top:0.5rem;">
+                            {{ point[1] }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+
+            {# Vision card #}
+            <div>
+
+                <div style="background:linear-gradient(
+                                135deg,
+                                var(--green-darkest) 0%,
+                                var(--green-dark) 100%
+                            );
+                            border-radius:1.5rem;
+                            padding:2.5rem;
+                            color:white;
+                            margin-bottom:1.5rem;">
+
+                    <div style="font-size:2.5rem;margin-bottom:1rem;">
+                        🔭
+                    </div>
+                    <h3 style="font-size:1.25rem;font-weight:800;
+                               color:white;margin-bottom:1rem;">
+                        Our Vision
+                    </h3>
+                    <p style="font-size:0.9rem;
+                              color:rgba(255,255,255,0.82);
+                              line-height:1.75;margin:0;">
+                        A Nigeria where every smallholder farmer has
+                        access to the knowledge, tools, and community
+                        needed to grow food sustainably, profitably, and
+                        in harmony with their land and cultural heritage.
+                    </p>
+
+                </div>
+
+                <div style="background:var(--gold-ghost);
+                            border:1px solid var(--gold-pale);
+                            border-radius:1.25rem;
+                            padding:2rem;">
+
+                    <div style="font-size:2rem;margin-bottom:0.875rem;">
+                        💡
+                    </div>
+                    <h3 style="font-size:1.1rem;font-weight:700;
+                               color:var(--gray-900);margin-bottom:0.75rem;">
+                        Our Approach
+                    </h3>
+                    <p style="font-size:0.875rem;
+                              color:var(--gray-600);
+                              line-height:1.7;margin:0;">
+                        We combine structured video-based learning,
+                        downloadable reference materials, practical
+                        assignments, and expert grading to deliver a
+                        complete agricultural education experience
+                        accessible from any device.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</section>
+
+
+{# ── What We Offer ─────────────────────────────────────────── #}
+<section style="padding:5rem 0;background:var(--gray-50);
+                border-top:1px solid var(--color-border);">
+    <div class="container">
+
+        <div style="text-align:center;margin-bottom:3rem;">
+
+            <div style="display:inline-block;
+                        background:var(--blue-ghost);
+                        color:var(--blue-dark);
+                        padding:4px 16px;
+                        border-radius:999px;
+                        font-size:0.8rem;
+                        font-weight:700;
+                        text-transform:uppercase;
+                        letter-spacing:0.08em;
+                        margin-bottom:1rem;">
+                Platform Features
+            </div>
+
+            <h2 style="font-size:2rem;font-weight:900;
+                       color:var(--gray-900);
+                       margin-bottom:0.75rem;">
+                Everything You Need to Learn Agriculture
+            </h2>
+            <p style="font-size:1rem;color:var(--gray-500);
+                      max-width:520px;margin:0 auto;
+                      line-height:1.65;">
+                Our platform combines video learning, digital resources,
+                interactive assignments, and expert feedback in one
+                easy-to-use agricultural education system.
+            </p>
+
+        </div>
+
+        <div style="display:grid;
+                    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+                    gap:1.5rem;">
+
+            {% set features = [
+                ('🎬', 'Video Learning',
+                 'var(--blue-ghost)',
+                 'Stream expert farming videos directly in your browser with our built-in HD video player. Download for offline learning when internet is unavailable.'),
+                ('📄', 'PDF Resources',
+                 'var(--red-ghost)',
+                 'Access farming guides, research materials, and study documents in the built-in PDF viewer. Download any material to your device for reference.'),
+                ('📝', 'Assignments',
+                 'var(--gold-ghost)',
+                 'Submit your work by typing directly in the platform or uploading a document or image. Receive detailed scores and written feedback from expert instructors.'),
+                ('🏆', 'Certificates',
+                 'var(--green-ghost)',
+                 'Earn a verifiable course completion certificate when you finish all modules and pass your assignments. Demonstrate your agricultural expertise.'),
+                ('📊', 'Progress Tracking',
+                 'var(--orange-ghost)',
+                 'Monitor your learning progress module by module in real time. View completion percentages, time spent, and assignment scores on your dashboard.'),
+                ('🌾', 'Indigenous Knowledge',
+                 'var(--green-ghost)',
+                 'Discover traditional African farming techniques, indigenous crop varieties, and generational agricultural wisdom preserved and taught on the platform.'),
+            ] %}
+
+            {% for icon, title, bg, desc in features %}
+            <div style="background:white;
+                        border:1px solid var(--color-border);
+                        border-radius:1.25rem;
+                        padding:1.75rem;
+                        transition:all 0.25s ease;"
+                 class="feature-about-card">
+
+                <div style="width:52px;height:52px;
+                            background:{{ bg }};
+                            border-radius:0.875rem;
+                            display:flex;align-items:center;
+                            justify-content:center;
+                            font-size:1.6rem;
+                            margin-bottom:1rem;">
+                    {{ icon }}
+                </div>
+
+                <h3 style="font-size:1rem;font-weight:700;
+                           color:var(--gray-900);margin-bottom:0.625rem;">
+                    {{ title }}
+                </h3>
+
+                <p style="font-size:0.875rem;color:var(--gray-500);
+                          line-height:1.65;margin:0;">
+                    {{ desc }}
+                </p>
+
+            </div>
+            {% endfor %}
+
+        </div>
+
+    </div>
+</section>
+
+
+{# ── Objectives ────────────────────────────────────────────── #}
+<section style="padding:5rem 0;background:white;">
+    <div class="container">
+
+        <div style="display:grid;
+                    grid-template-columns:1fr 1fr;
+                    gap:3rem;
+                    align-items:flex-start;"
+             id="objectivesGrid">
+
+            <div>
+                <div style="display:inline-block;
+                            background:var(--orange-ghost);
+                            color:var(--orange-dark);
+                            padding:4px 16px;
+                            border-radius:999px;
+                            font-size:0.8rem;
+                            font-weight:700;
+                            text-transform:uppercase;
+                            letter-spacing:0.08em;
+                            margin-bottom:1rem;">
+                    Our Objectives
+                </div>
+
+                <h2 style="font-size:1.875rem;font-weight:900;
+                           color:var(--gray-900);
+                           line-height:1.3;margin-bottom:1.5rem;">
+                    What This Platform
+                    Is Designed to Achieve
+                </h2>
+
+                <div style="display:flex;
+                            flex-direction:column;
+                            gap:1rem;">
+
+                    {% set objectives = [
+                        ('1', 'Design a user-friendly web-based platform for indigenous farming stakeholders that is accessible on any device.'),
+                        ('2', 'Provide a structured course catalog with expert-created content covering modern and traditional agricultural practices.'),
+                        ('3', 'Enable learners to access video lessons, PDF resources, and downloadable materials for self-paced learning.'),
+                        ('4', 'Support assignment submission through typed text answers or file uploads with instructor grading and feedback.'),
+                        ('5', 'Track learner progress module by module and issue certificates upon successful course completion.'),
+                        ('6', 'Provide administrative tools for content management, user management, and platform analytics.'),
+                    ] %}
+
+                    {% for number, text in objectives %}
+                    <div style="display:flex;
+                                align-items:flex-start;
+                                gap:1rem;
+                                padding:1rem 1.25rem;
+                                background:var(--gray-50);
+                                border:1px solid var(--color-border);
+                                border-radius:0.875rem;
+                                border-left:4px solid var(--green-dark);">
+
+                        <div style="width:28px;height:28px;
+                                    border-radius:50%;
+                                    background:var(--green-dark);
+                                    color:white;
+                                    display:flex;align-items:center;
+                                    justify-content:center;
+                                    font-size:0.75rem;
+                                    font-weight:800;flex-shrink:0;">
+                            {{ number }}
+                        </div>
+
+                        <p style="font-size:0.875rem;
+                                  color:var(--gray-700);
+                                  line-height:1.6;margin:0;
+                                  padding-top:3px;">
+                            {{ text }}
+                        </p>
+
+                    </div>
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+            {# Technology Stack #}
+            <div>
+
+                <div style="display:inline-block;
+                            background:var(--blue-ghost);
+                            color:var(--blue-dark);
+                            padding:4px 16px;
+                            border-radius:999px;
+                            font-size:0.8rem;
+                            font-weight:700;
+                            text-transform:uppercase;
+                            letter-spacing:0.08em;
+                            margin-bottom:1rem;">
+                    Technology Stack
+                </div>
+
+                <h2 style="font-size:1.875rem;font-weight:900;
+                           color:var(--gray-900);
+                           line-height:1.3;margin-bottom:1.5rem;">
+                    Built With Modern,
+                    Proven Technologies
+                </h2>
+
+                <div style="display:grid;
+                            grid-template-columns:1fr 1fr;
+                            gap:0.875rem;">
+
+                    {% set tech_stack = [
+                        ('🐍', 'Python',         'Backend language',      'var(--blue-ghost)'),
+                        ('⚗️', 'Flask',           'Web framework',         'var(--green-ghost)'),
+                        ('🗄️', 'PostgreSQL',      'Database',              'var(--blue-ghost)'),
+                        ('🔗', 'SQLAlchemy',      'ORM layer',             'var(--gold-ghost)'),
+                        ('🌐', 'HTML5 + CSS3',    'Frontend markup',       'var(--orange-ghost)'),
+                        ('⚡', 'JavaScript',      'Interactivity',         'var(--gold-ghost)'),
+                        ('📊', 'Chart.js',        'Data visualization',    'var(--green-ghost)'),
+                        ('🔒', 'Flask-Login',     'Authentication',        'var(--red-ghost)'),
+                    ] %}
+
+                    {% for icon, name, desc, bg in tech_stack %}
+                    <div style="background:{{ bg }};
+                                border-radius:0.875rem;
+                                padding:1rem;
+                                display:flex;align-items:center;
+                                gap:0.75rem;">
+                        <span style="font-size:1.25rem;">{{ icon }}</span>
+                        <div>
+                            <div style="font-weight:700;font-size:0.875rem;
+                                        color:var(--gray-900);">
+                                {{ name }}
+                            </div>
+                            <div style="font-size:0.75rem;
+                                        color:var(--gray-500);">
+                                {{ desc }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                </div>
+
+                <div style="margin-top:1.5rem;
+                            padding:1.25rem;
+                            background:var(--green-ghost);
+                            border:1px solid var(--green-pale);
+                            border-radius:0.875rem;">
+                    <p style="font-size:0.875rem;
+                              color:var(--green-darkest);
+                              line-height:1.65;margin:0;">
+                        🔐 The platform implements enterprise-grade
+                        security including password hashing, CSRF
+                        protection, role-based access control, input
+                        sanitization, and secure file upload handling.
+                    </p>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</section>
+
+
+{# ── Impact Section ────────────────────────────────────────── #}
+<section style="padding:5rem 0;
+                background:var(--green-darkest);">
+    <div class="container">
+
+        <div style="text-align:center;margin-bottom:3rem;">
+            <h2 style="font-size:2rem;font-weight:900;
+                       color:white;margin-bottom:0.75rem;">
+                Why Agricultural Education Matters
+            </h2>
+            <p style="font-size:1rem;
+                      color:rgba(255,255,255,0.7);
+                      max-width:560px;margin:0 auto;
+                      line-height:1.65;">
+                Agriculture feeds Nigeria. Supporting farmers with
+                knowledge is the most powerful investment in food
+                security, rural prosperity, and national development.
+            </p>
+        </div>
+
+        <div style="display:grid;
+                    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+                    gap:1.5rem;">
+
+            {% set impact_items = [
+                ('🌽', '70%',
+                 'of Nigeria\'s population depends on agriculture for their livelihood.'),
+                ('🍽️', '80%',
+                 'of food consumed in Nigeria is produced by smallholder farmers.'),
+                ('📉', '40%',
+                 'of harvests are lost to poor practices and post-harvest handling.'),
+                ('📚', '10×',
+                 'return on investment seen by farmers who receive agricultural training.'),
+            ] %}
+
+            {% for icon, stat, desc in impact_items %}
+            <div style="background:rgba(255,255,255,0.07);
+                        border:1px solid rgba(255,255,255,0.12);
+                        border-radius:1.25rem;
+                        padding:2rem;
+                        text-align:center;">
+
+                <div style="font-size:2.5rem;margin-bottom:0.75rem;">
+                    {{ icon }}
+                </div>
+                <div style="font-size:2.25rem;font-weight:900;
+                            color:var(--gold-light);
+                            line-height:1;margin-bottom:0.5rem;">
+                    {{ stat }}
+                </div>
+                <p style="font-size:0.875rem;
+                          color:rgba(255,255,255,0.7);
+                          line-height:1.6;margin:0;">
+                    {{ desc }}
+                </p>
+
+            </div>
+            {% endfor %}
+
+        </div>
+
+    </div>
+</section>
+
+
+{# ── Call to Action ────────────────────────────────────────── #}
+<section style="padding:5rem 0;
+                background:var(--green-ghost);
+                border-top:1px solid var(--green-pale);
+                text-align:center;">
+    <div class="container">
+
+        <div style="font-size:3.5rem;margin-bottom:1.25rem;
+                    animation:float 5s ease-in-out infinite;">
+            🌾
+        </div>
+
+        <h2 style="font-size:2rem;font-weight:900;
+                   color:var(--green-darkest);
+                   margin-bottom:1rem;">
+            Ready to Start Learning?
+        </h2>
+
+        <p style="font-size:1rem;color:var(--gray-600);
+                  max-width:480px;margin:0 auto 2rem;
+                  line-height:1.7;">
+            Join our growing community of farmers and agriculture
+            students. Create your free account today and access
+            all courses immediately.
+        </p>
+
+        <div style="display:flex;
+                    justify-content:center;
+                    gap:1rem;flex-wrap:wrap;">
+
+            {% if current_user.is_authenticated %}
+
+                {% if current_user.is_admin() %}
+                <a href="{{ url_for('admin.dashboard') }}"
+                   class="btn btn-primary btn-lg">
+                    🛡️ Go to Admin Dashboard
+                </a>
+                {% else %}
+                <a href="{{ url_for('learner.dashboard') }}"
+                   class="btn btn-primary btn-lg">
+                    📊 Go to My Dashboard
+                </a>
+                {% endif %}
+
+            {% else %}
+
+                <a href="{{ url_for('auth.register') }}"
+                   class="btn btn-primary btn-lg">
+                    🌱 Create Free Account
+                </a>
+
+                <a href="{{ url_for('courses.catalog') }}"
+                   class="btn btn-outline-primary btn-lg">
+                    📚 Browse Courses
+                </a>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+</section>
+
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+'use strict';
+
+/* ── About page feature card hover ───────────────────────── */
+document.querySelectorAll('.feature-about-card').forEach(function(card) {
+    card.addEventListener('mouseenter', function() {
+        this.style.transform   = 'translateY(-5px)';
+        this.style.boxShadow   = 'var(--shadow-xl)';
+        this.style.borderColor = 'var(--green-pale)';
+    });
+    card.addEventListener('mouseleave', function() {
+        this.style.transform   = '';
+        this.style.boxShadow   = '';
+        this.style.borderColor = 'var(--color-border)';
+    });
+});
+
+/* ── Responsive grids ────────────────────────────────────── */
+(function() {
+    function adjustGrids() {
+        const cols = window.innerWidth <= 768 ? '1fr' : '1fr 1fr';
+        ['missionGrid', 'objectivesGrid'].forEach(function(id) {
+            const el = document.getElementById(id);
+            if (el) el.style.gridTemplateColumns = cols;
+        });
+    }
+    adjustGrids();
+    window.addEventListener('resize', adjustGrids);
+})();
+</script>
+{% endblock %}

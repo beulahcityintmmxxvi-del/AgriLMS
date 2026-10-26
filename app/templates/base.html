@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<!--
+=================================================================
+Agri LMS — Base Layout Template
+=================================================================
+File    : app/templates/base.html
+Purpose : Master Jinja2 layout template extended by every
+          page in the platform.
+Blocks  :
+    title       — Page <title> text
+    head_extra  — Additional <head> tags
+    breadcrumb  — Optional breadcrumb bar
+    content     — Main page content
+    footer      — Page footer (overridable)
+    scripts     — Page-specific scripts
+=================================================================
+-->
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>
+        {% block title %}{{ app_name }}{% endblock %} — {{ app_name }}
+    </title>
+
+    <meta name="description"
+          content="Agricultural Learning Management System — Learn indigenous and modern farming practices online.">
+    <meta name="author"    content="{{ app_name }}">
+    <meta name="theme-color" content="#1b4332">
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+            defer></script>
+
+    {% block head_extra %}{% endblock %}
+
+    <style>
+        #page-loading-bar {
+            position: fixed;
+            top: 0; left: 0;
+            height: 3px;
+            width: 0%;
+            background: #52b788;
+            z-index: 99999;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(82,183,136,0.6);
+        }
+    </style>
+</head>
+
+<body class="{% if current_user.is_authenticated %}has-sidebar{% endif %}">
+
+<!-- Page loading bar -->
+<div id="page-loading-bar"></div>
+
+<!-- ============================================================
+     NAVIGATION BAR
+     ============================================================ -->
+<nav class="navbar" role="navigation" aria-label="Main navigation">
+
+    <!-- Brand -->
+    <a href="{{ url_for('main.index') }}"
+       class="navbar-brand"
+       aria-label="{{ app_name }} home">
+        <div class="navbar-brand-icon" aria-hidden="true">🌿</div>
+        <div class="navbar-brand-text">
+            <span class="navbar-brand-name">Agri LMS</span>
+            <span class="navbar-brand-tagline">Agricultural Learning</span>
+        </div>
+    </a>
+
+    <!-- Sidebar toggle — authenticated only -->
+    {% if current_user.is_authenticated %}
+    <button class="navbar-toggle"
+            id="sidebarToggle"
+            aria-label="Toggle sidebar"
+            aria-expanded="false"
+            aria-controls="appSidebar">
+        ☰
+    </button>
+    {% endif %}
+
+    <!-- Center nav links — public only -->
+    {% if not current_user.is_authenticated %}
+    <nav class="navbar-nav" aria-label="Public navigation">
+        <a href="{{ url_for('main.index') }}"
+           class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}">
+            <span class="nav-icon">🏠</span> Home
+        </a>
+        <a href="{{ url_for('main.about') }}"
+           class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}">
+            <span class="nav-icon">ℹ️</span> About
+        </a>
+        <a href="{{ url_for('courses.catalog') }}"
+           class="nav-link {% if request.endpoint and 'courses' in request.endpoint %}active{% endif %}">
+            <span class="nav-icon">📚</span> Courses
+        </a>
+        <a href="{{ url_for('main.contact') }}"
+           class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}">
+            <span class="nav-icon">✉️</span> Contact
+        </a>
+    </nav>
+    {% endif %}
+
+    <!-- Right controls -->
+    <div class="navbar-right">
+
+        {% if current_user.is_authenticated %}
+
+            <!-- Notification bell -->
+            <a href="#" class="navbar-notif" aria-label="Notifications">
+                🔔
+                <span class="notif-dot" aria-hidden="true"></span>
+            </a>
+
+            <!-- User dropdown -->
+            <div class="navbar-user" id="userMenuContainer">
+
+                <button class="navbar-user-btn"
+                        id="userMenuToggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-controls="userDropdown">
+
+                    <div class="navbar-avatar" aria-hidden="true">
+                        {% if current_user.profile_photo and
+                              current_user.profile_photo != 'default_profile.png' %}
+                            <img src="{{ url_for('static',
+                                        filename='uploads/profiles/' + current_user.profile_photo) }}"
+                                 alt="{{ current_user.full_name }}"
+                                 onerror="this.style.display='none'">
+                        {% else %}
+                            {{ current_user.full_name[0].upper() if current_user.full_name else '?' }}
+                        {% endif %}
+                    </div>
+
+                    <span class="navbar-username">
+                        {{ current_user.full_name.split()[0] if current_user.full_name else 'User' }}
+                    </span>
+                    <span class="navbar-chevron" aria-hidden="true">▾</span>
+
+                </button>
+
+                <!-- Dropdown panel -->
+                <div class="user-dropdown"
+                     id="userDropdown"
+                     role="menu"
+                     aria-labelledby="userMenuToggle">
+
+                    <div class="user-dropdown-header">
+                        <div class="user-dropdown-name">{{ current_user.full_name }}</div>
+                        <div class="user-dropdown-role">
+                            {{ current_user.role | capitalize }}
+                            {% if current_user.is_admin() %}🛡️{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="user-dropdown-items">
+
+                        {% if current_user.is_learner() %}
+                        <a href="{{ url_for('learner.dashboard') }}"
+                           class="user-dropdown-item" role="menuitem">
+                            📊 My Dashboard
+                        </a>
+                        <a href="{{ url_for('learner.profile') }}"
+                           class="user-dropdown-item" role="menuitem">
+                            👤 My Profile
+                        </a>
+                        <a href="{{ url_for('learner.progress') }}"
+                           class="user-dropdown-item" role="menuitem">
+                            📈 My Progress
+                        </a>
+                        {% endif %}
+
+                        {% if current_user.is_admin() %}
+                        <a href="{{ url_for('admin.dashboard') }}"
+                           class="user-dropdown-item" role="menuitem">
+                            🛡️ Admin Dashboard
+                        </a>
+                        <a href="{{ url_for('admin.users') }}"
+                           class="user-dropdown-item" role="menuitem">
+                            👥 Manage Users
+                        </a>
+                        {% endif %}
+
+                        <div class="user-dropdown-divider" role="separator"></div>
+
+                        <a href="{{ url_for('auth.logout') }}"
+                           class="user-dropdown-item danger"
+                           role="menuitem"
+                           id="logoutLink">
+                            🚪 Log Out
+                        </a>
+
+                    </div>
+
+                </div>
+                <!-- end user-dropdown -->
+
+            </div>
+            <!-- end navbar-user -->
+
+        {% else %}
+
+            <a href="{{ url_for('auth.login') }}"
+               class="btn btn-ghost btn-sm"
+               style="color: rgba(255,255,255,0.85);">
+                🔑 Log In
+            </a>
+
+            <a href="{{ url_for('auth.register') }}"
+               class="btn btn-secondary btn-sm">
+                🌱 Register
+            </a>
+
+        {% endif %}
+
+        <!-- Mobile hamburger -->
+        <button class="navbar-hamburger"
+                id="mobileMenuToggle"
+                aria-label="Toggle mobile menu"
+                aria-expanded="false">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+
+    </div>
+    <!-- end navbar-right -->
+
+</nav>
+<!-- end navbar -->
+
+
+<!-- ============================================================
+     SIDEBAR OVERLAY — mobile backdrop
+     ============================================================ -->
+{% if current_user.is_authenticated %}
+<div class="sidebar-overlay"
+     id="sidebarOverlay"
+     aria-hidden="true"></div>
+{% endif %}
+
+
+<!-- ============================================================
+     SIDEBAR NAVIGATION
+     ============================================================ -->
+{% if current_user.is_authenticated %}
+<aside class="sidebar"
+       id="appSidebar"
+       role="complementary"
+       aria-label="Side navigation">
+
+    <!-- Sidebar user header -->
+    <div class="sidebar-header">
+        <div class="sidebar-user-info">
+            <div class="sidebar-avatar">
+                {% if current_user.profile_photo and
+                      current_user.profile_photo != 'default_profile.png' %}
+                    <img src="{{ url_for('static',
+                                filename='uploads/profiles/' + current_user.profile_photo) }}"
+                         alt="{{ current_user.full_name }}"
+                         onerror="this.style.display='none'">
+                {% else %}
+                    {{ current_user.full_name[0].upper() if current_user.full_name else '?' }}
+                {% endif %}
+            </div>
+            <div class="sidebar-user-details">
+                <div class="sidebar-user-name">{{ current_user.full_name }}</div>
+                <div class="sidebar-user-role">
+                    {% if current_user.is_admin() %}🛡️ Administrator
+                    {% else %}🌱 Learner{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ── LEARNER SIDEBAR ── -->
+    {% if current_user.is_learner() %}
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Learning</div>
+            <nav class="sidebar-nav" aria-label="Learning navigation">
+                <a href="{{ url_for('learner.dashboard') }}"
+                   class="sidebar-nav-item {% if request.endpoint == 'learner.dashboard' %}active{% endif %}"
+                   data-tooltip="Dashboard">
+                    <span class="sidebar-nav-icon">📊</span>
+                    <span class="sidebar-nav-text">Dashboard</span>
+                </a>
+                <a href="{{ url_for('courses.catalog') }}"
+                   class="sidebar-nav-item {% if request.endpoint and 'courses' in request.endpoint %}active{% endif %}"
+                   data-tooltip="Browse Courses">
+                    <span class="sidebar-nav-icon">📚</span>
+                    <span class="sidebar-nav-text">Browse Courses</span>
+                </a>
+                <a href="{{ url_for('learner.my_courses') }}"
+                   class="sidebar-nav-item {% if request.endpoint == 'learner.my_courses' %}active{% endif %}"
+                   data-tooltip="My Courses">
+                    <span class="sidebar-nav-icon">🎓</span>
+                    <span class="sidebar-nav-text">My Courses</span>
+                </a>
+                <a href="{{ url_for('learner.assignments') }}"
+                   class="sidebar-nav-item {% if request.endpoint == 'learner.assignments' %}active{% endif %}"
+                   data-tooltip="Assignments">
+                    <span class="sidebar-nav-icon">📝</span>
+                    <span class="sidebar-nav-text">Assignments</span>
+                </a>
+                <a href="{{ url_for('learner.progress') }}"
+                   class="sidebar-nav-item {% if request.endpoint == 'learner.progress' %}active{% endif %}"
+                   data-tooltip="My Progress">
+                    <span class="sidebar-nav-icon">📈</span>
+                    <span class="sidebar-nav-text">My Progress</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Account</div>
+            <nav class="sidebar-nav" aria-label="Account navigation">
+                <a href="{{ url_for('learner.profile') }}"
+                   class="sidebar-nav-item {% if request.endpoint == 'learner.profile' %}active{% endif %}"
+                   data-tooltip="My Profile">
+                    <span class="sidebar-nav-icon">👤</span>
+                    <span class="sidebar-nav-text">My Profile</span>
+                </a>
+            </nav>
+        </div>
+
+    {% endif %}
+    <!-- end learner sidebar -->
+
+
+    <!-- ── ADMIN SIDEBAR ── -->
+    {% if current_user.is_admin() %}
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Overview</div>
+            <nav class="sidebar-nav" aria-label="Admin overview">
+                <a href="{{ url_for('admin.dashboard') }}"
+                   class="sidebar-nav-item {% if request.endpoint == 'admin.dashboard' %}active{% endif %}"
+                   data-tooltip="Dashboard">
+                    <span class="sidebar-nav-icon">🛡️</span>
+                    <span class="sidebar-nav-text">Dashboard</span>
+                </a>
+                <a href="{{ url_for('admin.reports') }}"
+                   class="sidebar-nav-item {% if request.endpoint == 'admin.reports' %}active{% endif %}"
+                   data-tooltip="Reports">
+                    <span class="sidebar-nav-icon">📊</span>
+                    <span class="sidebar-nav-text">Reports</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Content</div>
+            <nav class="sidebar-nav" aria-label="Content management">
+                <a href="{{ url_for('admin.courses') }}"
+                   class="sidebar-nav-item {% if request.endpoint and 'admin.course' in request.endpoint %}active{% endif %}"
+                   data-tooltip="Courses">
+                    <span class="sidebar-nav-icon">📚</span>
+                    <span class="sidebar-nav-text">Courses</span>
+                </a>
+                <a href="{{ url_for('admin.modules') }}"
+                   class="sidebar-nav-item {% if request.endpoint and 'admin.module' in request.endpoint %}active{% endif %}"
+                   data-tooltip="Modules">
+                    <span class="sidebar-nav-icon">📖</span>
+                    <span class="sidebar-nav-text">Modules</span>
+                </a>
+                <a href="{{ url_for('admin.materials') }}"
+                   class="sidebar-nav-item {% if request.endpoint and 'admin.material' in request.endpoint %}active{% endif %}"
+                   data-tooltip="Materials">
+                    <span class="sidebar-nav-icon">🎬</span>
+                    <span class="sidebar-nav-text">Materials</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Assessment</div>
+            <nav class="sidebar-nav" aria-label="Assessment management">
+                <a href="{{ url_for('admin.assignments') }}"
+                   class="sidebar-nav-item {% if request.endpoint and 'admin.assignment' in request.endpoint %}active{% endif %}"
+                   data-tooltip="Assignments">
+                    <span class="sidebar-nav-icon">📝</span>
+                    <span class="sidebar-nav-text">Assignments</span>
+                </a>
+                <a href="{{ url_for('admin.submissions') }}"
+                   class="sidebar-nav-item {% if request.endpoint and 'admin.submission' in request.endpoint %}active{% endif %}"
+                   data-tooltip="Submissions">
+                    <span class="sidebar-nav-icon">📥</span>
+                    <span class="sidebar-nav-text">Submissions</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Users</div>
+            <nav class="sidebar-nav" aria-label="User management">
+                <a href="{{ url_for('admin.users') }}"
+                   class="sidebar-nav-item {% if request.endpoint == 'admin.users' %}active{% endif %}"
+                   data-tooltip="All Users">
+                    <span class="sidebar-nav-icon">👥</span>
+                    <span class="sidebar-nav-text">All Users</span>
+                </a>
+            </nav>
+        </div>
+
+    {% endif %}
+    <!-- end admin sidebar -->
+
+
+    <!-- Sidebar footer logout -->
+    <div class="sidebar-footer">
+        <a href="{{ url_for('auth.logout') }}"
+           class="sidebar-nav-item"
+           data-tooltip="Log Out"
+           style="color: var(--red-mid);"
+           id="sidebarLogout">
+            <span class="sidebar-nav-icon">🚪</span>
+            <span class="sidebar-nav-text">Log Out</span>
+        </a>
+    </div>
+
+</aside>
+<!-- end sidebar -->
+{% endif %}
+
+
+<!-- ============================================================
+     APP BODY
+     ============================================================ -->
+<div class="app-body">
+<main class="page-content" id="mainContent" role="main">
+
+
+    <!-- ============================================================
+         FLASH MESSAGES
+         ============================================================ -->
+    <div class="flash-container"
+         id="flashContainer"
+         role="alert"
+         aria-live="polite">
+
+        {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+            {% for category, message in messages %}
+
+                {% set alert_class = {
+                    'success': 'alert-success',
+                    'error':   'alert-danger',
+                    'danger':  'alert-danger',
+                    'warning': 'alert-warning',
+                    'info':    'alert-info',
+                    'message': 'alert-info'
+                }.get(category, 'alert-info') %}
+
+                {% set alert_icon = {
+                    'success': '✅',
+                    'error':   '❌',
+                    'danger':  '❌',
+                    'warning': '⚠️',
+                    'info':    'ℹ️',
+                    'message': 'ℹ️'
+                }.get(category, 'ℹ️') %}
+
+                <div class="alert {{ alert_class }} flash-message"
+                     role="alert"
+                     data-auto-dismiss="6000">
+                    <span class="alert-icon" aria-hidden="true">{{ alert_icon }}</span>
+                    <div class="alert-content">
+                        <p class="alert-text">{{ message }}</p>
+                    </div>
+                    <button class="alert-close"
+                            aria-label="Close"
+                            onclick="dismissFlash(this.closest('.flash-message'))">
+                        ✕
+                    </button>
+                </div>
+
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+    </div>
+    <!-- end flash-container -->
+
+
+    <!-- ── Breadcrumb block ── -->
+    {% block breadcrumb %}{% endblock %}
+
+
+    <!-- ── Main content block ── -->
+    {% block content %}
+    <div class="empty-state">
+        <span class="empty-state-illustration">🌿</span>
+        <h2 class="empty-state-title">Welcome to {{ app_name }}</h2>
+        <p class="empty-state-text">This page is under construction.</p>
+        <a href="{{ url_for('main.index') }}" class="btn btn-primary">Return Home</a>
+    </div>
+    {% endblock %}
+
+
+</main>
+</div>
+<!-- end app-body -->
+
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+{% block footer %}
+<footer class="footer" role="contentinfo">
+    <div class="container">
+
+        <div class="footer-grid">
+
+            <div>
+                <div class="footer-brand-name">🌿 {{ app_name }}</div>
+                <p class="footer-brand-text">
+                    A modern agricultural learning management system
+                    promoting indigenous and modern farming education.
+                </p>
+            </div>
+
+            <div>
+                <div class="footer-heading">Learning</div>
+                <div class="footer-links">
+                    <a href="{{ url_for('courses.catalog') }}" class="footer-link">Browse Courses</a>
+                    {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('learner.my_courses') }}" class="footer-link">My Courses</a>
+                    <a href="{{ url_for('learner.assignments') }}" class="footer-link">Assignments</a>
+                    {% else %}
+                    <a href="{{ url_for('auth.register') }}" class="footer-link">Get Started</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div>
+                <div class="footer-heading">Platform</div>
+                <div class="footer-links">
+                    <a href="{{ url_for('main.about') }}"   class="footer-link">About Us</a>
+                    <a href="{{ url_for('main.contact') }}" class="footer-link">Contact</a>
+                </div>
+            </div>
+
+            <div>
+                <div class="footer-heading">Account</div>
+                <div class="footer-links">
+                    {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('learner.profile') }}" class="footer-link">My Profile</a>
+                    <a href="{{ url_for('auth.logout') }}"    class="footer-link">Log Out</a>
+                    {% else %}
+                    <a href="{{ url_for('auth.login') }}"    class="footer-link">Log In</a>
+                    <a href="{{ url_for('auth.register') }}" class="footer-link">Register</a>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer-divider"></div>
+
+        <div class="footer-bottom">
+            <span>&copy; {{ current_year }} {{ app_name }}. All rights reserved.</span>
+            <span>Built for agricultural education.</span>
+        </div>
+
+    </div>
+</footer>
+{% endblock %}
+
+
+<!-- ============================================================
+     GLOBAL JAVASCRIPT
+     ============================================================ -->
+<script>
+'use strict';
+
+/* ── 1. PAGE LOADING BAR ─────────────────────────────────── */
+(function() {
+    const bar = document.getElementById('page-loading-bar');
+    if (!bar) return;
+
+    bar.style.width = '70%';
+
+    window.addEventListener('load', function() {
+        bar.style.width = '100%';
+        setTimeout(function() {
+            bar.style.opacity = '0';
+            setTimeout(function() { bar.style.display = 'none'; }, 300);
+        }, 300);
+    });
+
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('mailto:') ||
+            href.startsWith('tel:') || link.target === '_blank') return;
+
+        bar.style.display  = 'block';
+        bar.style.opacity  = '1';
+        bar.style.width    = '0%';
+        setTimeout(function() { bar.style.width = '60%'; }, 10);
+    });
+})();
+
+
+/* ── 2. SIDEBAR TOGGLE ───────────────────────────────────── */
+(function() {
+    const sidebar        = document.getElementById('appSidebar');
+    const sidebarToggle  = document.getElementById('sidebarToggle');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    if (!sidebar) return;
+
+    const COLLAPSED_KEY = 'agrilms_sidebar_collapsed';
+    const isMobile = () => window.innerWidth <= 991;
+
+    if (!isMobile() && localStorage.getItem(COLLAPSED_KEY) === 'true') {
+        sidebar.classList.add('collapsed');
+    }
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', function() {
+            if (isMobile()) {
+                sidebar.classList.toggle('mobile-open');
+                if (sidebarOverlay) sidebarOverlay.classList.toggle('active');
+                const isOpen = sidebar.classList.contains('mobile-open');
+                sidebarToggle.setAttribute('aria-expanded', isOpen);
+            } else {
+                sidebar.classList.toggle('collapsed');
+                const isCollapsed = sidebar.classList.contains('collapsed');
+                localStorage.setItem(COLLAPSED_KEY, isCollapsed);
+                sidebarToggle.setAttribute('aria-expanded', !isCollapsed);
+            }
+        });
+    }
+
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', function() {
+            sidebar.classList.remove('mobile-open');
+            sidebarOverlay.classList.remove('active');
+            if (sidebarToggle) sidebarToggle.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    window.addEventListener('resize', function() {
+        if (!isMobile()) {
+            sidebar.classList.remove('mobile-open');
+            if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+        }
+    });
+})();
+
+
+/* ── 3. USER DROPDOWN MENU ───────────────────────────────── */
+(function() {
+    const container = document.getElementById('userMenuContainer');
+    const toggle    = document.getElementById('userMenuToggle');
+    const dropdown  = document.getElementById('userDropdown');
+
+    if (!container || !toggle || !dropdown) return;
+
+    toggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const isOpen = container.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', isOpen);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!container.contains(e.target)) {
+            container.classList.remove('open');
+            toggle.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && container.classList.contains('open')) {
+            container.classList.remove('open');
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.focus();
+        }
+    });
+})();
+
+
+/* ── 4. MOBILE HAMBURGER ─────────────────────────────────── */
+(function() {
+    const hamburger = document.getElementById('mobileMenuToggle');
+    if (!hamburger) return;
+
+    hamburger.addEventListener('click', function() {
+        hamburger.classList.toggle('open');
+        const isOpen = hamburger.classList.contains('open');
+        hamburger.setAttribute('aria-expanded', isOpen);
+
+        const sidebar = document.getElementById('appSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (sidebar) sidebar.classList.toggle('mobile-open', isOpen);
+        if (overlay) overlay.classList.toggle('active', isOpen);
+    });
+})();
+
+
+/* ── 5. FLASH MESSAGE DISMISS ────────────────────────────── */
+function dismissFlash(el) {
+    if (!el || el.classList.contains('dismissing')) return;
+    el.classList.add('dismissing');
+    setTimeout(function() {
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+    }, 350);
+}
+
+(function() {
+    document.querySelectorAll('.flash-message[data-auto-dismiss]')
+        .forEach(function(flash) {
+            const delay = parseInt(flash.dataset.autoDismiss, 10) || 6000;
+            setTimeout(function() { dismissFlash(flash); }, delay);
+        });
+})();
+
+
+/* ── 6. MODAL SYSTEM ─────────────────────────────────────── */
+function openModal(modalId) {
+    const backdrop = document.getElementById(modalId);
+    if (!backdrop) return;
+    backdrop.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    setTimeout(function() {
+        const focusable = backdrop.querySelector(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable) focusable.focus();
+    }, 100);
+}
+
+function closeModal(modalId) {
+    const backdrop = document.getElementById(modalId);
+    if (!backdrop) return;
+    backdrop.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal-backdrop')) {
+        e.target.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const openBackdrop = document.querySelector('.modal-backdrop.active');
+        if (openBackdrop) {
+            openBackdrop.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+});
+
+
+/* ── 7. CONFIRMATION DIALOGS ─────────────────────────────── */
+function confirmAction(message, onConfirm) {
+    if (window.confirm(message || 'Are you sure?')) {
+        if (typeof onConfirm === 'function') onConfirm();
+        return true;
+    }
+    return false;
+}
+
+document.addEventListener('click', function(e) {
+    const el = e.target.closest('[data-confirm]');
+    if (!el) return;
+    const message = el.dataset.confirm || 'Are you sure you want to do this?';
+    if (!window.confirm(message)) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+});
+
+
+/* ── 8. LOGOUT CONFIRMATION ──────────────────────────────── */
+(function() {
+    document.querySelectorAll('#logoutLink, #sidebarLogout')
+        .forEach(function(link) {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const href = this.getAttribute('href');
+                if (window.confirm('Are you sure you want to log out of {{ app_name }}?')) {
+                    window.location.href = href;
+                }
+            });
+        });
+})();
+
+
+/* ── 9. CHARACTER COUNTER ────────────────────────────────── */
+(function() {
+    document.querySelectorAll('[data-max-chars]').forEach(function(input) {
+        const max     = parseInt(input.dataset.maxChars, 10);
+        const counter = input.parentNode.querySelector('.char-counter');
+        if (!counter) return;
+
+        function update() {
+            const remaining = max - input.value.length;
+            counter.textContent = remaining + ' characters remaining';
+            counter.classList.remove('near-limit', 'at-limit');
+            if (remaining <= 0)           counter.classList.add('at-limit');
+            else if (remaining <= max * 0.1) counter.classList.add('near-limit');
+        }
+
+        input.addEventListener('input', update);
+        update();
+    });
+})();
+
+
+/* ── 10. FILE UPLOAD DRAG AND DROP ───────────────────────── */
+(function() {
+    document.querySelectorAll('.file-upload-area').forEach(function(area) {
+        const input   = area.querySelector('input[type="file"]');
+        const preview = area.dataset.previewTarget
+            ? document.getElementById(area.dataset.previewTarget) : null;
+
+        if (!input) return;
+
+        area.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            area.classList.add('drag-over');
+        });
+
+        area.addEventListener('dragleave', function() {
+            area.classList.remove('drag-over');
+        });
+
+        area.addEventListener('drop', function(e) {
+            e.preventDefault();
+            area.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                input.files = e.dataTransfer.files;
+                input.dispatchEvent(new Event('change'));
+            }
+        });
+
+        input.addEventListener('change', function() {
+            if (!preview || !this.files || this.files.length === 0) return;
+            const file   = this.files[0];
+            const icons  = { video:'🎬', application:'📝', image:'🖼️', text:'📋' };
+            const icon   = icons[file.type.split('/')[0]] || '📁';
+            const sizeStr = file.size < 1024 * 1024
+                ? (file.size / 1024).toFixed(1) + ' KB'
+                : (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+
+            preview.innerHTML =
+                '<div class="file-preview">' +
+                    '<span class="file-preview-icon">' + icon + '</span>' +
+                    '<div class="file-preview-info">' +
+                        '<div class="file-preview-name">' + file.name + '</div>' +
+                        '<div class="file-preview-size">' + sizeStr + '</div>' +
+                    '</div>' +
+                    '<button type="button" class="file-preview-remove" ' +
+                            'onclick="clearFileInput(this)">✕</button>' +
+                '</div>';
+        });
+    });
+})();
+
+function clearFileInput(btn) {
+    const preview = btn.closest('.file-preview');
+    if (preview) preview.remove();
+    const input = document.querySelector('input[type="file"]');
+    if (input) input.value = '';
+}
+
+
+/* ── 11. PROGRESS BAR ANIMATION ──────────────────────────── */
+(function() {
+    function animate() {
+        document.querySelectorAll('.progress-bar[data-value]')
+            .forEach(function(bar) {
+                const value = Math.min(Math.max(parseFloat(bar.dataset.value) || 0, 0), 100);
+                bar.style.width = '0%';
+                setTimeout(function() { bar.style.width = value + '%'; }, 200);
+            });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', animate);
+    } else {
+        animate();
+    }
+})();
+
+
+/* ── 12. CHART.JS GLOBAL DEFAULTS ───────────────────────── */
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Chart === 'undefined') return;
+
+    Chart.defaults.font.family =
+        "'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif";
+    Chart.defaults.font.size = 13;
+    Chart.defaults.color     = '#6c757d';
+
+    Chart.defaults.plugins.legend.labels.padding       = 20;
+    Chart.defaults.plugins.legend.labels.usePointStyle = true;
+
+    Chart.defaults.plugins.tooltip.backgroundColor = '#212529';
+    Chart.defaults.plugins.tooltip.titleColor      = '#ffffff';
+    Chart.defaults.plugins.tooltip.bodyColor       = 'rgba(255,255,255,0.8)';
+    Chart.defaults.plugins.tooltip.padding         = 12;
+    Chart.defaults.plugins.tooltip.cornerRadius    = 8;
+
+    Chart.defaults.animation.duration = 800;
+    Chart.defaults.animation.easing   = 'easeInOutQuart';
+
+    window.AgriChartColors = {
+        green: '#2d6a4f', gold: '#f59f00', blue: '#1976d2',
+        orange: '#f76707', red: '#e03131', gray: '#adb5bd'
+    };
+});
+
+
+/* ── 13. TABLE SEARCH FILTER ─────────────────────────────── */
+function filterTable(input) {
+    const table = document.querySelector(input.dataset.tableFilter);
+    if (!table) return;
+    const query = input.value.toLowerCase().trim();
+    table.querySelectorAll('tbody tr').forEach(function(row) {
+        row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+    });
+}
+
+document.addEventListener('input', function(e) {
+    if (e.target.dataset.tableFilter) filterTable(e.target);
+});
+
+
+/* ── 14. TOAST NOTIFICATION ──────────────────────────────── */
+function showToast(message, type, duration) {
+    type     = type     || 'info';
+    duration = duration || 5000;
+
+    const icons     = { success:'✅', info:'ℹ️', warning:'⚠️', danger:'❌' };
+    const container = document.getElementById('flashContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-' + type + ' flash-message';
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML =
+        '<span class="alert-icon">' + (icons[type] || 'ℹ️') + '</span>' +
+        '<div class="alert-content"><p class="alert-text">' + message + '</p></div>' +
+        '<button class="alert-close" onclick="dismissFlash(this.closest(\'.flash-message\'))">✕</button>';
+
+    container.appendChild(toast);
+    setTimeout(function() { dismissFlash(toast); }, duration);
+}
+
+
+/* ── 15. UTILITIES ───────────────────────────────────────── */
+function formatNaira(value) {
+    return '₦' + parseFloat(value || 0).toLocaleString('en-NG', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return parseFloat((bytes / Math.pow(1024, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function() {
+        const ctx  = this;
+        const args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(function() { func.apply(ctx, args); }, wait);
+    };
+}
+
+</script>
+
+<!-- ── Platform JavaScript ── -->
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+<!-- ── Child template page-specific scripts ── -->
+{% block scripts %}{% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% block title %}Manage Courses{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;
+            justify-content:space-between;
+            margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
+    <div>
+        <div class="page-title">
+            <span class="title-icon">📚</span> Manage Courses
+        </div>
+        <p class="page-subtitle">
+            Create, edit, publish, and manage all learning courses.
+        </p>
+    </div>
+    <a href="{{ url_for('admin.create_course') }}"
+       class="btn btn-primary btn-lg">
+        ➕ Create New Course
+    </a>
+</div>
+
+{# Stats row #}
+<div class="dashboard-grid cols-4" style="margin-bottom:2rem;">
+    {% for label, value, color in [
+        ('Total Courses', courses|length, 'stat-green'),
+        ('Published', courses|selectattr('is_published')|list|length, 'stat-blue'),
+        ('Drafts', courses|rejectattr('is_published')|rejectattr('is_archived')|list|length, 'stat-gold'),
+        ('Archived', courses|selectattr('is_archived')|list|length, 'stat-orange'),
+    ] %}
+    <div class="stat-card {{ color }}">
+        <div class="stat-card-content">
+            <div class="stat-card-value">{{ value }}</div>
+            <div class="stat-card-label">{{ label }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{# Course table #}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-header-title">All Courses</h2>
+        <div class="card-header-actions">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       placeholder="Search courses..."
+                       data-table-filter="#coursesTable">
+            </div>
+        </div>
+    </div>
+
+    {% if courses %}
+    <div class="table-wrapper" style="border-radius:0;border:none;box-shadow:none;">
+        <table class="table" id="coursesTable">
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Category</th>
+                    <th>Level</th>
+                    <th>Modules</th>
+                    <th>Enrolled</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in courses %}
+                <tr>
+                    <td>
+                        <div style="font-weight:700;color:var(--gray-900);
+                                    max-width:260px;white-space:nowrap;
+                                    overflow:hidden;text-overflow:ellipsis;">
+                            {{ course.title }}
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--gray-400);">
+                            {{ course.short_description | truncate_words(8) }}
+                        </div>
+                    </td>
+                    <td style="font-size:0.8125rem;">
+                        {{ course.category or '—' }}
+                    </td>
+                    <td>
+                        <span class="level-badge level-{{ course.level or 'beginner' }}">
+                            {{ course.level | capitalize if course.level else 'Beginner' }}
+                        </span>
+                    </td>
+                    <td style="text-align:center;font-weight:700;
+                               color:var(--blue-dark);">
+                        {{ course.get_total_modules_count() }}
+                    </td>
+                    <td style="text-align:center;font-weight:700;
+                               color:var(--green-dark);">
+                        {{ course.get_total_enrollments() }}
+                    </td>
+                    <td>
+                        {% if course.is_archived %}
+                        <span class="badge badge-dark">Archived</span>
+                        {% elif course.is_published %}
+                        <span class="badge badge-success">Published</span>
+                        {% else %}
+                        <span class="badge badge-secondary">Draft</span>
+                        {% endif %}
+                        {% if course.is_featured %}
+                        <span class="badge badge-gold badge-sm">⭐ Featured</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:0.8125rem;color:var(--gray-500);
+                               white-space:nowrap;">
+                        {{ course.date_created | dateformat('%d %b %Y') }}
+                    </td>
+                    <td>
+                        <div class="cell-actions">
+                            <a href="{{ url_for('courses.course_detail',
+                                               course_id=course.id) }}"
+                               class="btn btn-light btn-xs"
+                               title="Preview" target="_blank">👁️</a>
+
+                            <a href="{{ url_for('admin.edit_course',
+                                               course_id=course.id) }}"
+                               class="btn btn-primary btn-xs">
+                                Edit
+                            </a>
+
+                            <form method="POST"
+                                  action="{{ url_for('admin.toggle_course_publish',
+                                                   course_id=course.id) }}"
+                                  style="display:inline;">
+                                <input type="hidden" name="csrf_token"
+                                       value="{{ csrf_token() }}">
+                                <button type="submit"
+                                        class="btn btn-xs
+                                        {% if course.is_published %}btn-warning
+                                        {% else %}btn-success{% endif %}"
+                                        title="Toggle publish">
+                                    {% if course.is_published %}Unpublish
+                                    {% else %}Publish{% endif %}
+                                </button>
+                            </form>
+
+                            <a href="{{ url_for('admin.modules',
+                                               course_id=course.id) }}"
+                               class="btn btn-info btn-xs">
+                                Modules
+                            </a>
+
+                            <form method="POST"
+                                  action="{{ url_for('admin.delete_course',
+                                                   course_id=course.id) }}"
+                                  style="display:inline;"
+                                  data-confirm="Delete '{{ course.title }}'? This will also delete all modules, materials, and enrollments.">
+                                <input type="hidden" name="csrf_token"
+                                       value="{{ csrf_token() }}">
+                                <button type="submit"
+                                        class="btn btn-danger btn-xs">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body">
+        <div class="empty-state">
+            <span class="empty-state-illustration">📚</span>
+            <h2 class="empty-state-title">No Courses Yet</h2>
+            <p class="empty-state-text">
+                Create your first course to get started.
+            </p>
+            <a href="{{ url_for('admin.create_course') }}"
+               class="btn btn-primary">
+                ➕ Create First Course
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

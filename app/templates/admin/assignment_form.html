@@ -1,0 +1,291 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+
+<div style="max-width:750px;margin:0 auto;">
+
+    <div style="margin-bottom:1.5rem;">
+        <a href="{{ url_for('admin.assignments',
+                           course_id=selected_course_id if selected_course_id else '') }}"
+           style="color:var(--green-mid);font-size:0.875rem;text-decoration:none;">
+            ← Back to Assignments
+        </a>
+        <div class="page-title" style="margin-top:0.5rem;">
+            <span class="title-icon">
+                {% if action=='create' %}➕{% else %}✏️{% endif %}
+            </span>
+            {{ title }}
+        </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {# Basic Info #}
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-header">
+                <h2 class="card-header-title">📋 Assignment Details</h2>
+            </div>
+            <div class="card-body">
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Course <span class="required">*</span>
+                    </label>
+                    <select name="course_id" class="form-control"
+                            required id="courseSelect">
+                        <option value="">— Select Course —</option>
+                        {% for course in courses %}
+                        <option value="{{ course.id }}"
+                            {% if (assignment and assignment.course_id == course.id) or
+                                  selected_course_id == course.id %}
+                                selected{% endif %}>
+                            {{ course.title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Link to Module
+                        <span class="optional">(optional)</span>
+                    </label>
+                    <select name="module_id" class="form-control">
+                        <option value="">— Course-level Assignment —</option>
+                        {% for mod in modules %}
+                        <option value="{{ mod.id }}"
+                            {% if assignment and assignment.module_id == mod.id %}
+                                selected{% endif %}>
+                            {{ mod.get_module_label() }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <span class="form-text">
+                        Link to a specific module or leave blank
+                        for a course-wide assignment.
+                    </span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Assignment Title <span class="required">*</span>
+                    </label>
+                    <input type="text" name="title" class="form-control"
+                           placeholder="e.g. Assignment 1: Soil pH Testing Report"
+                           value="{{ assignment.title if assignment else '' }}"
+                           required maxlength="300">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Description <span class="required">*</span>
+                    </label>
+                    <textarea name="description" class="form-control tall"
+                              placeholder="Full description of the assignment — what learners need to do, background context, and what is being assessed..."
+                              required>{{ assignment.description if assignment else '' }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Submission Instructions</label>
+                    <textarea name="instructions" class="form-control"
+                              rows="4"
+                              placeholder="Step-by-step instructions:
+1. Test soil from 3 different spots
+2. Record your pH readings
+3. Write a 300-word report
+4. Upload as PDF">{{ assignment.instructions if assignment else '' }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Attachment for Learners
+                        <span class="optional">(template, rubric)</span>
+                    </label>
+                    <input type="file" name="attachment"
+                           class="form-control">
+                    {% if assignment and assignment.attachment_filename %}
+                    <div style="margin-top:0.5rem;font-size:0.8rem;
+                                color:var(--green-mid);">
+                        Current: {{ assignment.attachment_filename }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Reference Links</label>
+                    <textarea name="reference_links" class="form-control short"
+                              placeholder="One URL per line:
+https://www.example.com/soil-guide
+https://www.fao.org/soil-health">{{ assignment.reference_links if assignment else '' }}</textarea>
+                    <span class="form-text">One URL per line.</span>
+                </div>
+
+            </div>
+        </div>
+
+        {# Grading #}
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-header">
+                <h2 class="card-header-title">🎯 Grading</h2>
+            </div>
+            <div class="card-body">
+
+                <div class="form-row cols-3">
+                    <div class="form-group">
+                        <label class="form-label">Total Marks</label>
+                        <input type="number" name="total_marks"
+                               class="form-control" min="1" step="0.5"
+                               value="{{ assignment.total_marks | int if assignment else 100 }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Pass Mark</label>
+                        <input type="number" name="pass_mark"
+                               class="form-control" min="0" step="0.5"
+                               value="{{ assignment.pass_mark | int if assignment else 50 }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            Weight
+                            <span class="optional" title="Relative weight for averaging">(×)</span>
+                        </label>
+                        <input type="number" name="weight"
+                               class="form-control" min="0.1"
+                               step="0.1" value="{{ assignment.weight if assignment else 1.0 }}">
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        {# Submission Settings #}
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-header">
+                <h2 class="card-header-title">📤 Submission Settings</h2>
+            </div>
+            <div class="card-body">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Submission Type</label>
+                        <select name="submission_type"
+                                class="form-control">
+                            {% for stype, slabel in [
+                                ('both',            'Text or File Upload'),
+                                ('text_submission',  'Text Only'),
+                                ('file_upload',      'File Upload Only'),
+                            ] %}
+                            <option value="{{ stype }}"
+                                {% if (assignment and
+                                       assignment.submission_type == stype) or
+                                      (not assignment and stype == 'both') %}
+                                    selected{% endif %}>
+                                {{ slabel }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Max Submissions</label>
+                        <input type="number" name="max_submissions"
+                               class="form-control" min="1"
+                               value="{{ assignment.max_submissions if assignment else 1 }}">
+                        <span class="form-text">Attempts per learner.</span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">
+                            Allowed File Types
+                        </label>
+                        <input type="text" name="allowed_file_types"
+                               class="form-control"
+                               placeholder="pdf,docx,png,jpg,zip"
+                               value="{{ assignment.allowed_file_types if assignment else 'pdf,docx,doc,pptx,xlsx,png,jpg,jpeg,zip' }}">
+                        <span class="form-text">
+                            Comma-separated extensions.
+                        </span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Max File Size (MB)
+                        </label>
+                        <input type="number" name="max_file_size_mb"
+                               class="form-control" min="1" max="100"
+                               value="{{ assignment.max_file_size_mb if assignment else 20 }}">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Due Date & Time</label>
+                        <input type="datetime-local"
+                               name="due_date"
+                               class="form-control"
+                               value="{% if assignment and assignment.due_date %}{{ assignment.due_date.strftime('%Y-%m-%dT%H:%M') }}{% endif %}">
+                        <span class="form-text">
+                            Leave blank for no deadline.
+                        </span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Late Penalty (%)
+                        </label>
+                        <input type="number" name="late_penalty_percent"
+                               class="form-control" min="0" max="100"
+                               step="0.5"
+                               value="{{ assignment.late_penalty_percent if assignment else 0 }}">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Display Order</label>
+                    <input type="number" name="order_number"
+                           class="form-control" min="1"
+                           value="{{ assignment.order_number if assignment else 1 }}">
+                </div>
+
+                <div class="form-check-group horizontal"
+                     style="margin-top:0.5rem;">
+                    {% macro acheck(n, label, checked) %}
+                    <label class="form-check">
+                        <input type="checkbox" class="form-check-input"
+                               name="{{ n }}"
+                               {% if checked %}checked{% endif %}>
+                        <span class="form-check-label">{{ label }}</span>
+                    </label>
+                    {% endmacro %}
+
+                    {{ acheck('is_published', '🌐 Published',
+                        assignment.is_published if assignment else False) }}
+
+                    {{ acheck('late_submission_allowed',
+                        '⏰ Accept Late Submissions',
+                        assignment.late_submission_allowed
+                        if assignment else True) }}
+                </div>
+
+            </div>
+        </div>
+
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary btn-lg">
+                {% if action == 'create' %}➕ Create Assignment
+                {% else %}💾 Save Changes{% endif %}
+            </button>
+            <a href="{{ url_for('admin.assignments',
+                               course_id=selected_course_id if selected_course_id else '') }}"
+               class="btn btn-light btn-lg">
+                Cancel
+            </a>
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

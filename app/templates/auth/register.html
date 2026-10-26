@@ -1,5 +1,567 @@
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>Register</title></head>
-<body><h1>Register Page — Coming Soon</h1><a href="/">Home</a></body>
-</html>
+{% extends 'base.html' %}
+
+{# ============================================================
+   Agri LMS — Registration Page
+   ============================================================
+   Provides a clean, accessible registration form for new
+   learners. Includes server-side error display, field
+   value preservation on validation failure, and a
+   password strength indicator.
+   ============================================================ #}
+
+{% block title %}Create Your Account{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* Override sidebar offset — auth pages are full-width */
+    body.has-sidebar .page-content { margin-left: 0 !important; }
+    body .page-content {
+        padding: 0 !important;
+        background: var(--gray-50) !important;
+    }
+    body .app-body { display: block; }
+    body .footer    { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Auth page wrapper ── #}
+<div style="min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6rem 1rem 3rem;
+            background: linear-gradient(
+                135deg,
+                var(--green-ghost) 0%,
+                var(--gray-50) 50%,
+                var(--blue-ghost) 100%
+            );">
+
+    <div style="width: 100%; max-width: 560px;">
+
+        {# ── Back to home link ── #}
+        <div class="text-center mb-4">
+            <a href="{{ url_for('main.index') }}"
+               style="color: var(--green-dark);
+                      font-size: 0.875rem;
+                      font-weight: 600;
+                      text-decoration: none;
+                      display: inline-flex;
+                      align-items: center;
+                      gap: 0.375rem;">
+                ← Back to Home
+            </a>
+        </div>
+
+        {# ── Registration form card ── #}
+        <div class="form-card form-card-wide">
+
+            {# Card header #}
+            <div class="form-card-header">
+                <div class="form-card-icon">🌱</div>
+                <h1 class="form-card-title">Create Your Account</h1>
+                <p class="form-card-subtitle">
+                    Join thousands of farmers learning modern
+                    and indigenous agricultural practices.
+                </p>
+            </div>
+
+            {# Card body — registration form #}
+            <div class="form-card-body">
+
+                <form method="POST"
+                      action="{{ url_for('auth.register') }}"
+                      novalidate
+                      id="registrationForm"
+                      autocomplete="on">
+
+                    {# CSRF token — required by Flask-WTF #}
+                    <input type="hidden"
+                           name="csrf_token"
+                           value="{{ csrf_token() }}">
+
+                    {# ── Full Name ── #}
+                    <div class="form-group">
+                        <label for="full_name" class="form-label">
+                            <span class="label-icon">👤</span>
+                            Full Name
+                            <span class="required" aria-label="required">*</span>
+                        </label>
+                        <input type="text"
+                               id="full_name"
+                               name="full_name"
+                               class="form-control"
+                               placeholder="Enter your full name"
+                               value="{{ form_data.get('full_name', '') if form_data else '' }}"
+                               autocomplete="name"
+                               maxlength="150"
+                               required>
+                        <span class="form-text">
+                            Enter your first and last name as it appears on your ID.
+                        </span>
+                    </div>
+
+                    {# ── Email Address ── #}
+                    <div class="form-group">
+                        <label for="email" class="form-label">
+                            <span class="label-icon">✉️</span>
+                            Email Address
+                            <span class="required" aria-label="required">*</span>
+                        </label>
+                        <input type="email"
+                               id="email"
+                               name="email"
+                               class="form-control"
+                               placeholder="you@example.com"
+                               value="{{ form_data.get('email', '') if form_data else '' }}"
+                               autocomplete="email"
+                               maxlength="150"
+                               required>
+                        <span class="form-text">
+                            This will be your login email. Use a valid address.
+                        </span>
+                    </div>
+
+                    {# ── Phone Number (optional) ── #}
+                    <div class="form-group">
+                        <label for="phone_number" class="form-label">
+                            <span class="label-icon">📱</span>
+                            Phone Number
+                            <span class="optional">(optional)</span>
+                        </label>
+                        <input type="tel"
+                               id="phone_number"
+                               name="phone_number"
+                               class="form-control"
+                               placeholder="e.g. 08012345678"
+                               value="{{ form_data.get('phone_number', '') if form_data else '' }}"
+                               autocomplete="tel"
+                               maxlength="20">
+                    </div>
+
+                    {# ── State and Country ── #}
+                    <div class="form-row">
+
+                        <div class="form-group">
+                            <label for="state" class="form-label">
+                                <span class="label-icon">📍</span>
+                                State
+                                <span class="optional">(optional)</span>
+                            </label>
+                            <select id="state"
+                                    name="state"
+                                    class="form-control">
+                                <option value="">— Select State —</option>
+                                {% set ng_states = [
+                                    'Abia','Adamawa','Akwa Ibom','Anambra','Bauchi',
+                                    'Bayelsa','Benue','Borno','Cross River','Delta',
+                                    'Ebonyi','Edo','Ekiti','Enugu','FCT-Abuja',
+                                    'Gombe','Imo','Jigawa','Kaduna','Kano',
+                                    'Katsina','Kebbi','Kogi','Kwara','Lagos',
+                                    'Nasarawa','Niger','Ogun','Ondo','Osun',
+                                    'Oyo','Plateau','Rivers','Sokoto','Taraba',
+                                    'Yobe','Zamfara'
+                                ] %}
+                                {% for state in ng_states %}
+                                <option value="{{ state }}"
+                                    {% if form_data and form_data.get('state') == state %}
+                                        selected
+                                    {% endif %}>
+                                    {{ state }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="country" class="form-label">
+                                <span class="label-icon">🌍</span>
+                                Country
+                            </label>
+                            <select id="country"
+                                    name="country"
+                                    class="form-control">
+                                <option value="Nigeria"
+                                    {% if not form_data or form_data.get('country', 'Nigeria') == 'Nigeria' %}
+                                        selected
+                                    {% endif %}>
+                                    Nigeria
+                                </option>
+                                <option value="Ghana"
+                                    {% if form_data and form_data.get('country') == 'Ghana' %}
+                                        selected
+                                    {% endif %}>
+                                    Ghana
+                                </option>
+                                <option value="Kenya"
+                                    {% if form_data and form_data.get('country') == 'Kenya' %}
+                                        selected
+                                    {% endif %}>
+                                    Kenya
+                                </option>
+                                <option value="South Africa"
+                                    {% if form_data and form_data.get('country') == 'South Africa' %}
+                                        selected
+                                    {% endif %}>
+                                    South Africa
+                                </option>
+                                <option value="Other"
+                                    {% if form_data and form_data.get('country') == 'Other' %}
+                                        selected
+                                    {% endif %}>
+                                    Other
+                                </option>
+                            </select>
+                        </div>
+
+                    </div>
+                    {# end form-row #}
+
+                    {# ── Password ── #}
+                    <div class="form-group">
+                        <label for="password" class="form-label">
+                            <span class="label-icon">🔒</span>
+                            Password
+                            <span class="required" aria-label="required">*</span>
+                        </label>
+
+                        <div class="input-group" id="passwordGroup">
+                            <input type="password"
+                                   id="password"
+                                   name="password"
+                                   class="form-control"
+                                   placeholder="Create a strong password"
+                                   autocomplete="new-password"
+                                   minlength="8"
+                                   maxlength="128"
+                                   required>
+                            <button type="button"
+                                    class="input-group-btn"
+                                    id="togglePassword"
+                                    aria-label="Toggle password visibility"
+                                    style="font-size: 1rem;">
+                                👁️
+                            </button>
+                        </div>
+
+                        {# Password strength indicator #}
+                        <div style="margin-top: 0.5rem;">
+                            <div style="display: flex;
+                                        gap: 4px;
+                                        margin-bottom: 4px;">
+                                <div class="strength-bar"
+                                     style="height: 4px;
+                                            flex: 1;
+                                            border-radius: 4px;
+                                            background: var(--gray-200);
+                                            transition: background 0.3s;"
+                                     data-level="1"></div>
+                                <div class="strength-bar"
+                                     style="height: 4px;
+                                            flex: 1;
+                                            border-radius: 4px;
+                                            background: var(--gray-200);
+                                            transition: background 0.3s;"
+                                     data-level="2"></div>
+                                <div class="strength-bar"
+                                     style="height: 4px;
+                                            flex: 1;
+                                            border-radius: 4px;
+                                            background: var(--gray-200);
+                                            transition: background 0.3s;"
+                                     data-level="3"></div>
+                                <div class="strength-bar"
+                                     style="height: 4px;
+                                            flex: 1;
+                                            border-radius: 4px;
+                                            background: var(--gray-200);
+                                            transition: background 0.3s;"
+                                     data-level="4"></div>
+                            </div>
+                            <span id="strengthLabel"
+                                  style="font-size: 0.75rem;
+                                         color: var(--gray-400);">
+                                Enter a password to see strength
+                            </span>
+                        </div>
+
+                        <span class="form-text">
+                            Minimum 8 characters. Include letters and numbers
+                            for a stronger password.
+                        </span>
+                    </div>
+
+                    {# ── Confirm Password ── #}
+                    <div class="form-group">
+                        <label for="confirm_password" class="form-label">
+                            <span class="label-icon">🔐</span>
+                            Confirm Password
+                            <span class="required" aria-label="required">*</span>
+                        </label>
+
+                        <div class="input-group">
+                            <input type="password"
+                                   id="confirm_password"
+                                   name="confirm_password"
+                                   class="form-control"
+                                   placeholder="Re-enter your password"
+                                   autocomplete="new-password"
+                                   minlength="8"
+                                   maxlength="128"
+                                   required>
+                            <button type="button"
+                                    class="input-group-btn"
+                                    id="toggleConfirm"
+                                    aria-label="Toggle confirm password visibility"
+                                    style="font-size: 1rem;">
+                                👁️
+                            </button>
+                        </div>
+
+                        {# Match indicator #}
+                        <span id="matchIndicator"
+                              class="form-text"
+                              aria-live="polite">
+                        </span>
+                    </div>
+
+                    {# ── Terms Agreement ── #}
+                    <div class="form-group">
+                        <label class="form-check"
+                               style="align-items: flex-start;">
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   name="agree_terms"
+                                   id="agree_terms"
+                                   required>
+                            <span class="form-check-label"
+                                  style="line-height: 1.5;">
+                                I agree to the
+                                <a href="#" style="color: var(--green-dark);">
+                                    Terms of Service
+                                </a>
+                                and
+                                <a href="#" style="color: var(--green-dark);">
+                                    Privacy Policy
+                                </a>.
+                                I confirm that I am at least 13 years old.
+                            </span>
+                        </label>
+                    </div>
+
+                    {# ── Submit Button ── #}
+                    <button type="submit"
+                            class="btn btn-primary btn-block btn-lg"
+                            id="submitBtn"
+                            style="margin-top: 0.5rem;">
+                        <span id="submitBtnText">🌱 Create My Account</span>
+                    </button>
+
+                </form>
+                {# end form #}
+
+            </div>
+            {# end form-card-body #}
+
+            {# Card footer — login link #}
+            <div class="form-card-footer">
+                Already have an account?
+                <a href="{{ url_for('auth.login') }}"
+                   style="color: var(--green-dark);
+                          font-weight: 700;
+                          margin-left: 4px;">
+                    Log In →
+                </a>
+            </div>
+
+        </div>
+        {# end form-card #}
+
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+'use strict';
+
+/* =============================================================
+   Registration Page — Scripts
+   Handles:
+       - Password visibility toggle
+       - Real-time password strength indicator
+       - Real-time password match check
+       - Form submit loading state
+       - Client-side validation before submit
+   ============================================================= */
+
+/* ── Password Visibility Toggles ─────────────────────────── */
+document.getElementById('togglePassword').addEventListener('click', function() {
+    const input = document.getElementById('password');
+    const isText = input.type === 'text';
+    input.type = isText ? 'password' : 'text';
+    this.textContent = isText ? '👁️' : '🙈';
+    this.setAttribute('aria-label',
+        isText ? 'Show password' : 'Hide password');
+});
+
+document.getElementById('toggleConfirm').addEventListener('click', function() {
+    const input = document.getElementById('confirm_password');
+    const isText = input.type === 'text';
+    input.type = isText ? 'password' : 'text';
+    this.textContent = isText ? '👁️' : '🙈';
+    this.setAttribute('aria-label',
+        isText ? 'Show password' : 'Hide password');
+});
+
+
+/* ── Password Strength Indicator ─────────────────────────── */
+function calculateStrength(password) {
+    if (!password) return 0;
+
+    let score = 0;
+
+    /* Length check */
+    if (password.length >= 8)  score++;
+    if (password.length >= 12) score++;
+
+    /* Complexity checks */
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+    /* Cap at 4 */
+    return Math.min(score, 4);
+}
+
+document.getElementById('password').addEventListener('input', function() {
+    const strength = calculateStrength(this.value);
+    const bars     = document.querySelectorAll('.strength-bar');
+    const label    = document.getElementById('strengthLabel');
+
+    const colors = {
+        0: 'var(--gray-200)',
+        1: 'var(--red-mid)',
+        2: 'var(--orange-mid)',
+        3: 'var(--gold-mid)',
+        4: 'var(--green-mid)'
+    };
+
+    const labels = {
+        0: 'Enter a password to see strength',
+        1: '⚠️ Very weak — add more characters',
+        2: '🔶 Weak — add numbers or symbols',
+        3: '🔷 Good — almost there',
+        4: '✅ Strong password'
+    };
+
+    const labelColors = {
+        0: 'var(--gray-400)',
+        1: 'var(--red-mid)',
+        2: 'var(--orange-mid)',
+        3: 'var(--gold-dark)',
+        4: 'var(--green-mid)'
+    };
+
+    bars.forEach(function(bar) {
+        const level = parseInt(bar.dataset.level, 10);
+        bar.style.background = level <= strength
+            ? colors[strength]
+            : 'var(--gray-200)';
+    });
+
+    label.textContent   = labels[strength];
+    label.style.color   = labelColors[strength];
+
+    /* Also update match indicator if confirm has a value */
+    const confirm = document.getElementById('confirm_password');
+    if (confirm.value) {
+        updateMatchIndicator(this.value, confirm.value);
+    }
+});
+
+
+/* ── Password Match Indicator ─────────────────────────────── */
+function updateMatchIndicator(password, confirm) {
+    const indicator = document.getElementById('matchIndicator');
+
+    if (!confirm) {
+        indicator.textContent = '';
+        return;
+    }
+
+    if (password === confirm) {
+        indicator.textContent   = '✅ Passwords match';
+        indicator.style.color   = 'var(--green-mid)';
+    } else {
+        indicator.textContent   = '❌ Passwords do not match';
+        indicator.style.color   = 'var(--red-mid)';
+    }
+}
+
+document.getElementById('confirm_password').addEventListener('input', function() {
+    const password = document.getElementById('password').value;
+    updateMatchIndicator(password, this.value);
+});
+
+
+/* ── Form Submit Validation ───────────────────────────────── */
+document.getElementById('registrationForm').addEventListener('submit',
+    function(e) {
+
+    const fullName    = document.getElementById('full_name').value.trim();
+    const email       = document.getElementById('email').value.trim();
+    const password    = document.getElementById('password').value;
+    const confirm     = document.getElementById('confirm_password').value;
+    const agreeTerms  = document.getElementById('agree_terms').checked;
+
+    let isValid = true;
+    const errors = [];
+
+    if (!fullName || fullName.length < 2) {
+        errors.push('Please enter your full name (at least 2 characters).');
+        isValid = false;
+    }
+
+    if (!email || !email.includes('@')) {
+        errors.push('Please enter a valid email address.');
+        isValid = false;
+    }
+
+    if (!password || password.length < 8) {
+        errors.push('Password must be at least 8 characters long.');
+        isValid = false;
+    }
+
+    if (password !== confirm) {
+        errors.push('Passwords do not match.');
+        isValid = false;
+    }
+
+    if (!agreeTerms) {
+        errors.push('Please agree to the Terms of Service to continue.');
+        isValid = false;
+    }
+
+    if (!isValid) {
+        e.preventDefault();
+        errors.forEach(function(err) {
+            showToast(err, 'danger', 6000);
+        });
+        return;
+    }
+
+    /* Show loading state on submit button */
+    const btn     = document.getElementById('submitBtn');
+    const btnText = document.getElementById('submitBtnText');
+    btn.disabled          = true;
+    btn.classList.add('loading');
+    btnText.textContent   = 'Creating account...';
+});
+
+</script>
+{% endblock %}

@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;
+            justify-content:space-between;
+            margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
+    <div>
+        <div class="page-title">
+            <span class="title-icon">👥</span>
+            User Management
+        </div>
+        <p class="page-subtitle">
+            Manage learner and administrator accounts.
+        </p>
+    </div>
+</div>
+
+{# Search and filter bar #}
+<div class="card" style="margin-bottom:1.5rem;">
+    <div class="card-body compact">
+        <form method="GET"
+              style="display:grid;
+                     grid-template-columns:1fr auto auto auto;
+                     gap:0.875rem;align-items:flex-end;"
+              id="userFilterForm">
+
+            <div class="form-group" style="margin:0;">
+                <label class="form-label" style="font-size:0.75rem;">
+                    🔍 Search Users
+                </label>
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" name="search"
+                           class="form-control"
+                           placeholder="Search by name or email..."
+                           value="{{ search }}">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin:0;">
+                <label class="form-label" style="font-size:0.75rem;">
+                    Role
+                </label>
+                <select name="role" class="form-control"
+                        onchange="this.form.submit()">
+                    <option value="">All Roles</option>
+                    <option value="learner"
+                        {% if role == 'learner' %}selected{% endif %}>
+                        Learner
+                    </option>
+                    <option value="admin"
+                        {% if role == 'admin' %}selected{% endif %}>
+                        Admin
+                    </option>
+                </select>
+            </div>
+
+            <div style="padding-top:1.4rem;">
+                <button type="submit" class="btn btn-primary">
+                    Search
+                </button>
+            </div>
+
+            {% if search or role %}
+            <div style="padding-top:1.4rem;">
+                <a href="{{ url_for('admin.users') }}"
+                   class="btn btn-light">
+                    Clear
+                </a>
+            </div>
+            {% endif %}
+
+        </form>
+    </div>
+</div>
+
+{# Users table #}
+<div class="card">
+
+    <div class="card-header">
+        <h2 class="card-header-title">
+            All Users
+            {% if pagination %}
+            <span class="badge badge-light badge-sm"
+                  style="margin-left:0.5rem;">
+                {{ pagination.total }}
+            </span>
+            {% endif %}
+        </h2>
+    </div>
+
+    {% if users %}
+    <div class="table-wrapper"
+         style="border-radius:0;border:none;box-shadow:none;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Location</th>
+                    <th>Enrolled</th>
+                    <th>Registered</th>
+                    <th>Last Login</th>
+                    <th>Status</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        <div class="cell-avatar">
+                            <div class="cell-avatar-img"
+                                 style="background:
+                                 {% if user.role == 'admin' %}var(--green-darkest)
+                                 {% else %}var(--green-mid){% endif %};">
+                                {{ user.full_name[0].upper()
+                                   if user.full_name else '?' }}
+                            </div>
+                            <div>
+                                <div class="cell-avatar-name">
+                                    {{ user.full_name }}
+                                    {% if user.id == current_user.id %}
+                                    <span class="badge badge-green badge-sm">
+                                        You
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="cell-avatar-sub">
+                                    {{ user.email }}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <span class="badge
+                            {% if user.role == 'admin' %}badge-solid-green
+                            {% else %}badge-primary{% endif %}">
+                            {% if user.role == 'admin' %}🛡️{% else %}🌱{% endif %}
+                            {{ user.role | capitalize }}
+                        </span>
+                    </td>
+
+                    <td style="font-size:0.8125rem;color:var(--gray-500);">
+                        {{ (user.state + ', ') if user.state else '' }}
+                        {{ user.country or '—' }}
+                    </td>
+
+                    <td style="text-align:center;font-weight:700;
+                               color:var(--blue-dark);">
+                        {{ user.total_enrollments() }}
+                    </td>
+
+                    <td style="font-size:0.8125rem;
+                               color:var(--gray-500);white-space:nowrap;">
+                        {{ user.date_registered | dateformat('%d %b %Y') }}
+                    </td>
+
+                    <td style="font-size:0.8125rem;
+                               color:var(--gray-500);white-space:nowrap;">
+                        {{ user.last_login | dateformat('%d %b %Y')
+                           if user.last_login else 'Never' }}
+                    </td>
+
+                    <td>
+                        <span class="badge
+                            {% if user.is_active %}badge-success
+                            {% else %}badge-danger{% endif %}">
+                            {% if user.is_active %}Active
+                            {% else %}Inactive{% endif %}
+                        </span>
+                    </td>
+
+                    <td>
+                        <div class="cell-actions">
+
+                            {# Toggle active/inactive #}
+                            {% if user.id != current_user.id %}
+                            <form method="POST"
+                                  action="{{ url_for('admin.toggle_user_active',
+                                                   user_id=user.id) }}"
+                                  style="display:inline;"
+                                  data-confirm="{% if user.is_active %}Deactivate{% else %}Activate{% endif %} {{ user.full_name }}?">
+                                <input type="hidden" name="csrf_token"
+                                       value="{{ csrf_token() }}">
+                                <button type="submit"
+                                        class="btn btn-xs
+                                        {% if user.is_active %}btn-warning
+                                        {% else %}btn-success{% endif %}">
+                                    {% if user.is_active %}
+                                        Deactivate
+                                    {% else %}
+                                        Activate
+                                    {% endif %}
+                                </button>
+                            </form>
+                            {% endif %}
+
+                            {# Promote to admin #}
+                            {% if user.role == 'learner' %}
+                            <form method="POST"
+                                  action="{{ url_for('admin.make_admin',
+                                                   user_id=user.id) }}"
+                                  style="display:inline;"
+                                  data-confirm="Promote {{ user.full_name }} to administrator? They will gain full admin access.">
+                                <input type="hidden" name="csrf_token"
+                                       value="{{ csrf_token() }}">
+                                <button type="submit"
+                                        class="btn btn-xs btn-dark">
+                                    Make Admin
+                                </button>
+                            </form>
+                            {% endif %}
+
+                        </div>
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {# Pagination #}
+    {% if pagination and pagination.pages > 1 %}
+    <div class="table-footer">
+        <div class="table-info-text">
+            Showing
+            {{ ((pagination.page - 1) * pagination.per_page) + 1 }}–{{ [pagination.page * pagination.per_page, pagination.total] | min }}
+            of {{ pagination.total }}
+        </div>
+        <div class="pagination">
+            {% if pagination.has_prev %}
+            <div class="page-item">
+                <a href="{{ url_for('admin.users',
+                                   search=search, role=role,
+                                   page=pagination.prev_num) }}"
+                   class="page-link">←</a>
+            </div>
+            {% endif %}
+
+            {% for p in pagination.iter_pages() %}
+            {% if p %}
+            <div class="page-item
+                {% if p == pagination.page %}active{% endif %}">
+                <a href="{{ url_for('admin.users',
+                                   search=search, role=role, page=p) }}"
+                   class="page-link">{{ p }}</a>
+            </div>
+            {% else %}
+            <div class="page-item">
+                <span class="page-link">…</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+            <div class="page-item">
+                <a href="{{ url_for('admin.users',
+                                   search=search, role=role,
+                                   page=pagination.next_num) }}"
+                   class="page-link">→</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="card-body">
+        <div class="empty-state">
+            <span class="empty-state-illustration">👥</span>
+            <h2 class="empty-state-title">No Users Found</h2>
+            <p class="empty-state-text">
+                {% if search or role %}
+                    No users match your search criteria.
+                    Try adjusting your filters.
+                {% else %}
+                    No users have registered yet.
+                {% endif %}
+            </p>
+            {% if search or role %}
+            <a href="{{ url_for('admin.users') }}"
+               class="btn btn-primary">Clear Filters</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

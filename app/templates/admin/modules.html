@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% block title %}Manage Modules{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;
+            justify-content:space-between;
+            margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
+    <div>
+        <div class="page-title">
+            <span class="title-icon">📖</span>
+            {% if selected_course %}
+                Modules — {{ selected_course.title }}
+            {% else %}
+                All Modules
+            {% endif %}
+        </div>
+        <p class="page-subtitle">
+            Manage course modules, set order, and designate the final module.
+        </p>
+    </div>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+        {% if selected_course %}
+        <a href="{{ url_for('admin.create_module',
+                           course_id=selected_course.id) }}"
+           class="btn btn-primary">
+            ➕ Add Module
+        </a>
+        {% else %}
+        <a href="{{ url_for('admin.create_module') }}"
+           class="btn btn-primary">
+            ➕ Create Module
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+{# Course filter #}
+<div class="card" style="margin-bottom:1.5rem;">
+    <div class="card-body compact">
+        <form method="GET" style="display:flex;gap:0.875rem;align-items:flex-end;flex-wrap:wrap;">
+            <div class="form-group" style="margin:0;flex:1;min-width:200px;">
+                <label class="form-label" style="font-size:0.75rem;">
+                    Filter by Course
+                </label>
+                <select name="course_id" class="form-control"
+                        onchange="this.form.submit()">
+                    <option value="">All Courses</option>
+                    {% for course in courses %}
+                    <option value="{{ course.id }}"
+                        {% if course_id == course.id %}selected{% endif %}>
+                        {{ course.title }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Filter</button>
+            {% if course_id %}
+            <a href="{{ url_for('admin.modules') }}"
+               class="btn btn-light">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{# Modules table #}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-header-title">
+            Modules
+            <span class="badge badge-light badge-sm"
+                  style="margin-left:0.5rem;">
+                {{ modules | length }}
+            </span>
+        </h2>
+    </div>
+
+    {% if modules %}
+    <div class="table-wrapper"
+         style="border-radius:0;border:none;box-shadow:none;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Module Title</th>
+                    <th>Course</th>
+                    <th>Materials</th>
+                    <th>Duration</th>
+                    <th>Flags</th>
+                    <th>Status</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for module in modules %}
+                <tr>
+                    <td style="font-weight:800;
+                               color:var(--green-dark);
+                               font-size:1.1rem;">
+                        {{ module.order_number }}
+                    </td>
+                    <td>
+                        <div style="font-weight:700;
+                                    color:var(--gray-900);">
+                            {{ module.title }}
+                        </div>
+                        {% if module.description %}
+                        <div style="font-size:0.75rem;
+                                    color:var(--gray-400);">
+                            {{ module.description | truncate_words(8) }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:0.8125rem;
+                               color:var(--gray-500);">
+                        {{ module.course.title if module.course else '—' }}
+                    </td>
+                    <td style="text-align:center;">
+                        <span style="font-weight:700;
+                                     color:var(--blue-dark);">
+                            {{ module.get_total_materials_count() }}
+                        </span>
+                    </td>
+                    <td style="font-size:0.8125rem;
+                               color:var(--gray-500);">
+                        {{ module.get_duration_display() }}
+                    </td>
+                    <td>
+                        {% if module.is_last_module %}
+                        <span class="badge badge-gold">Final</span>
+                        {% endif %}
+                        {% if module.is_free_preview %}
+                        <span class="badge badge-green">Preview</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if module.is_published %}
+                        <span class="badge badge-success">Published</span>
+                        {% else %}
+                        <span class="badge badge-secondary">Draft</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="cell-actions">
+                            <a href="{{ url_for('admin.edit_module',
+                                               module_id=module.id) }}"
+                               class="btn btn-primary btn-xs">Edit</a>
+
+                            <a href="{{ url_for('admin.materials',
+                                               module_id=module.id) }}"
+                               class="btn btn-info btn-xs">Materials</a>
+
+                            <form method="POST"
+                                  action="{{ url_for('admin.delete_module',
+                                                   module_id=module.id) }}"
+                                  style="display:inline;"
+                                  data-confirm="Delete '{{ module.title }}'?">
+                                <input type="hidden" name="csrf_token"
+                                       value="{{ csrf_token() }}">
+                                <button type="submit"
+                                        class="btn btn-danger btn-xs">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body">
+        <div class="empty-state">
+            <span class="empty-state-illustration">📖</span>
+            <h2 class="empty-state-title">No Modules Yet</h2>
+            <p class="empty-state-text">
+                Create modules to add content to your courses.
+            </p>
+            <a href="{{ url_for('admin.create_module',
+                               course_id=course_id if course_id else '') }}"
+               class="btn btn-primary">
+                ➕ Create First Module
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

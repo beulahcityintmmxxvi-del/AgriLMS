@@ -1,5 +1,794 @@
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>Contact</title></head>
-<body><h1>Contact Page — Coming Soon</h1><a href="/">Home</a></body>
-</html>
+{% extends 'base.html' %}
+
+{# ============================================================
+   Agri LMS — Contact Page
+   ============================================================
+   File    : app/templates/contact.html
+   Purpose : Public contact page with contact form,
+             platform contact information, support channels,
+             and frequently asked questions section.
+   ============================================================ #}
+
+{% block title %}Contact Us — {{ app_name }}{% endblock %}
+
+{% block head_extra %}
+<style>
+    body.has-sidebar .page-content { margin-left: 0 !important; }
+    body .page-content {
+        padding: 0 !important;
+        background: white !important;
+    }
+    body .app-body { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+
+{# ── Page Hero ─────────────────────────────────────────────── #}
+<section style="background: linear-gradient(
+                    135deg,
+                    var(--green-darkest) 0%,
+                    var(--green-dark)    100%
+                );
+                padding: 4rem 0 3.5rem;
+                text-align: center;
+                position: relative;
+                overflow: hidden;">
+
+    <div aria-hidden="true"
+         style="position:absolute;top:-60px;right:-60px;
+                width:250px;height:250px;border-radius:50%;
+                background:rgba(255,255,255,0.04);">
+    </div>
+
+    <div class="container" style="position:relative;z-index:1;">
+
+        <div style="font-size:3.5rem;margin-bottom:1rem;">✉️</div>
+
+        <h1 style="font-size:clamp(1.75rem,4vw,2.75rem);
+                   font-weight:900;color:white;
+                   margin-bottom:0.875rem;line-height:1.2;">
+            Get in Touch
+        </h1>
+
+        <p style="font-size:1rem;
+                  color:rgba(255,255,255,0.8);
+                  max-width:520px;margin:0 auto;
+                  line-height:1.7;">
+            Have a question, suggestion, or need support?
+            We are here to help. Fill out the form below
+            and we will get back to you as soon as possible.
+        </p>
+
+    </div>
+
+</section>
+{# end hero #}
+
+
+{# ── Main Content ──────────────────────────────────────────── #}
+<section style="padding:4rem 0;background:var(--gray-50);">
+    <div class="container">
+
+        <div style="display:grid;
+                    grid-template-columns:1fr 400px;
+                    gap:2.5rem;
+                    align-items:flex-start;"
+             id="contactGrid">
+
+
+            {# ══ LEFT — Contact Form ═══════════════════════════ #}
+            <div>
+
+                <div class="card">
+
+                    <div class="card-header">
+                        <h2 class="card-header-title">
+                            📬 Send Us a Message
+                        </h2>
+                    </div>
+
+                    <div class="card-body">
+
+                        {# Success message after submission #}
+                        {% if request.args.get('sent') == '1' %}
+                        <div class="alert alert-success"
+                             style="margin-bottom:1.5rem;">
+                            <span class="alert-icon">✅</span>
+                            <div class="alert-content">
+                                <div class="alert-title">
+                                    Message Sent Successfully!
+                                </div>
+                                <p class="alert-text">
+                                    Thank you for contacting us.
+                                    We have received your message and
+                                    will respond within 24–48 hours
+                                    to the email address you provided.
+                                </p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <form method="POST"
+                              action="{{ url_for('main.contact') }}"
+                              id="contactForm"
+                              novalidate>
+
+                            <input type="hidden"
+                                   name="csrf_token"
+                                   value="{{ csrf_token() }}">
+
+                            {# Name and Email row #}
+                            <div class="form-row">
+
+                                <div class="form-group">
+                                    <label for="sender_name"
+                                           class="form-label">
+                                        <span class="label-icon">👤</span>
+                                        Your Full Name
+                                        <span class="required">*</span>
+                                    </label>
+                                    <input type="text"
+                                           id="sender_name"
+                                           name="sender_name"
+                                           class="form-control"
+                                           placeholder="Enter your full name"
+                                           value="{{ request.form.get('sender_name', '') }}"
+                                           required
+                                           maxlength="150">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="sender_email"
+                                           class="form-label">
+                                        <span class="label-icon">✉️</span>
+                                        Email Address
+                                        <span class="required">*</span>
+                                    </label>
+                                    <input type="email"
+                                           id="sender_email"
+                                           name="sender_email"
+                                           class="form-control"
+                                           placeholder="you@example.com"
+                                           value="{{ request.form.get('sender_email', '') }}"
+                                           required
+                                           maxlength="150">
+                                </div>
+
+                            </div>
+
+                            {# Phone and Category row #}
+                            <div class="form-row">
+
+                                <div class="form-group">
+                                    <label for="sender_phone"
+                                           class="form-label">
+                                        <span class="label-icon">📱</span>
+                                        Phone Number
+                                        <span class="optional">(optional)</span>
+                                    </label>
+                                    <input type="tel"
+                                           id="sender_phone"
+                                           name="sender_phone"
+                                           class="form-control"
+                                           placeholder="e.g. 08012345678"
+                                           value="{{ request.form.get('sender_phone', '') }}"
+                                           maxlength="20">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="category"
+                                           class="form-label">
+                                        <span class="label-icon">📂</span>
+                                        Message Category
+                                        <span class="required">*</span>
+                                    </label>
+                                    <select id="category"
+                                            name="category"
+                                            class="form-control"
+                                            required>
+                                        <option value="">
+                                            — Select Category —
+                                        </option>
+                                        {% for cat in [
+                                            'General Enquiry',
+                                            'Technical Support',
+                                            'Course Content Question',
+                                            'Assignment Submission Issue',
+                                            'Account Problem',
+                                            'Partnership Enquiry',
+                                            'Feedback and Suggestions',
+                                            'Report a Bug',
+                                            'Other',
+                                        ] %}
+                                        <option value="{{ cat }}"
+                                            {% if request.form.get('category') == cat %}
+                                                selected{% endif %}>
+                                            {{ cat }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            {# Subject #}
+                            <div class="form-group">
+                                <label for="subject"
+                                       class="form-label">
+                                    <span class="label-icon">📌</span>
+                                    Subject
+                                    <span class="required">*</span>
+                                </label>
+                                <input type="text"
+                                       id="subject"
+                                       name="subject"
+                                       class="form-control"
+                                       placeholder="Brief summary of your enquiry"
+                                       value="{{ request.form.get('subject', '') }}"
+                                       required
+                                       maxlength="300">
+                            </div>
+
+                            {# Message #}
+                            <div class="form-group">
+                                <label for="message"
+                                       class="form-label">
+                                    <span class="label-icon">💬</span>
+                                    Your Message
+                                    <span class="required">*</span>
+                                </label>
+                                <textarea id="message"
+                                          name="message"
+                                          class="form-control tall"
+                                          placeholder="Please describe your enquiry in as much detail as possible. The more information you provide, the faster we can help you..."
+                                          required
+                                          data-max-chars="2000"
+                                          maxlength="2000">{{ request.form.get('message', '') }}</textarea>
+                                <div style="display:flex;
+                                            justify-content:space-between;
+                                            margin-top:0.375rem;">
+                                    <span class="form-text">
+                                        Be as specific as possible.
+                                    </span>
+                                    <span class="char-counter"></span>
+                                </div>
+                            </div>
+
+                            {# How did you hear about us #}
+                            <div class="form-group">
+                                <label for="heard_from"
+                                       class="form-label">
+                                    <span class="label-icon">🔍</span>
+                                    How did you hear about us?
+                                    <span class="optional">(optional)</span>
+                                </label>
+                                <select id="heard_from"
+                                        name="heard_from"
+                                        class="form-control">
+                                    <option value="">— Select —</option>
+                                    {% for source in [
+                                        'Social Media',
+                                        'Friend or Colleague',
+                                        'Agricultural Extension Officer',
+                                        'Search Engine (Google, Bing)',
+                                        'Radio or Television',
+                                        'Community Event or Workshop',
+                                        'University or School',
+                                        'Other',
+                                    ] %}
+                                    <option value="{{ source }}">
+                                        {{ source }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            {# Submit button #}
+                            <div style="display:flex;
+                                        align-items:center;
+                                        gap:1rem;
+                                        flex-wrap:wrap;
+                                        padding-top:0.5rem;">
+
+                                <button type="submit"
+                                        class="btn btn-primary btn-lg"
+                                        id="contactSubmitBtn">
+                                    <span id="contactBtnText">
+                                        📤 Send Message
+                                    </span>
+                                </button>
+
+                                <span style="font-size:0.8rem;
+                                             color:var(--gray-400);">
+                                    We respond within 24–48 hours
+                                </span>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </div>
+            {# end left column #}
+
+
+            {# ══ RIGHT — Contact Info & FAQ ═══════════════════ #}
+            <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+
+                {# Contact Information Card #}
+                <div class="card">
+
+                    <div class="card-header">
+                        <h2 class="card-header-title"
+                            style="font-size:0.9375rem;">
+                            📍 Contact Information
+                        </h2>
+                    </div>
+
+                    <div class="card-body compact">
+
+                        <div style="display:flex;
+                                    flex-direction:column;
+                                    gap:1rem;">
+
+                            {% set contact_info = [
+                                ('✉️', 'Email',
+                                 'admin@agrilms.com',
+                                 'For all general enquiries'),
+                                ('📱', 'WhatsApp Support',
+                                 '+234 800 000 0000',
+                                 'Mon–Fri, 9am–5pm WAT'),
+                                ('🌐', 'Website',
+                                 'www.agrilms.com',
+                                 'Platform access and courses'),
+                                ('📍', 'Address',
+                                 'Nigeria',
+                                 'Serving farmers across Nigeria'),
+                            ] %}
+
+                            {% for icon, label, value, sub in contact_info %}
+                            <div style="display:flex;
+                                        align-items:flex-start;
+                                        gap:0.875rem;
+                                        padding:0.875rem;
+                                        background:var(--gray-50);
+                                        border-radius:0.75rem;">
+
+                                <div style="width:38px;height:38px;
+                                            border-radius:50%;
+                                            background:var(--green-ghost);
+                                            display:flex;align-items:center;
+                                            justify-content:center;
+                                            font-size:1.1rem;
+                                            flex-shrink:0;">
+                                    {{ icon }}
+                                </div>
+
+                                <div>
+                                    <div style="font-size:0.75rem;
+                                                font-weight:600;
+                                                color:var(--gray-400);
+                                                text-transform:uppercase;
+                                                letter-spacing:0.05em;
+                                                margin-bottom:2px;">
+                                        {{ label }}
+                                    </div>
+                                    <div style="font-weight:700;
+                                                font-size:0.875rem;
+                                                color:var(--gray-900);">
+                                        {{ value }}
+                                    </div>
+                                    <div style="font-size:0.75rem;
+                                                color:var(--gray-400);">
+                                        {{ sub }}
+                                    </div>
+                                </div>
+
+                            </div>
+                            {% endfor %}
+
+                        </div>
+
+                    </div>
+
+                </div>
+                {# end contact info #}
+
+
+                {# Response Time Card #}
+                <div style="background:var(--green-ghost);
+                            border:1px solid var(--green-pale);
+                            border-radius:1.25rem;
+                            padding:1.5rem;">
+
+                    <div style="font-size:1.5rem;margin-bottom:0.75rem;">
+                        ⏱️
+                    </div>
+                    <h3 style="font-size:0.9375rem;font-weight:700;
+                               color:var(--green-darkest);
+                               margin-bottom:0.5rem;">
+                        Response Times
+                    </h3>
+
+                    <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                        {% for label, time, color in [
+                            ('General Enquiries',  '24–48 hours',  'var(--green-dark)'),
+                            ('Technical Support',  '4–8 hours',    'var(--blue-dark)'),
+                            ('Course Questions',   '48–72 hours',  'var(--gold-dark)'),
+                            ('Partnerships',       '3–5 business days', 'var(--orange-dark)'),
+                        ] %}
+                        <div style="display:flex;
+                                    justify-content:space-between;
+                                    align-items:center;
+                                    font-size:0.8125rem;">
+                            <span style="color:var(--gray-600);">
+                                {{ label }}
+                            </span>
+                            <span style="font-weight:700;color:{{ color }};">
+                                {{ time }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                </div>
+
+
+                {# Social / Community Links #}
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-header-title"
+                            style="font-size:0.9375rem;">
+                            🌍 Join Our Community
+                        </h2>
+                    </div>
+                    <div class="card-body compact">
+                        <p style="font-size:0.875rem;
+                                  color:var(--gray-600);
+                                  line-height:1.6;
+                                  margin-bottom:1rem;">
+                            Connect with other farmers and learners
+                            in our growing community of agricultural
+                            knowledge sharers.
+                        </p>
+                        <div style="display:flex;
+                                    flex-direction:column;gap:0.5rem;">
+                            {% for icon, platform, handle in [
+                                ('📘', 'Facebook Group',   '@AgriLMSNigeria'),
+                                ('🐦', 'Twitter/X',        '@AgriLMS'),
+                                ('📸', 'Instagram',        '@agri.lms'),
+                                ('💬', 'WhatsApp Group',   'Join via link'),
+                            ] %}
+                            <a href="#"
+                               style="display:flex;align-items:center;
+                                      gap:0.75rem;padding:0.625rem 0.75rem;
+                                      background:var(--gray-50);
+                                      border-radius:0.625rem;
+                                      text-decoration:none;
+                                      transition:background 0.15s;"
+                               class="social-link">
+                                <span style="font-size:1.1rem;">{{ icon }}</span>
+                                <div>
+                                    <div style="font-weight:600;
+                                                font-size:0.8125rem;
+                                                color:var(--gray-800);">
+                                        {{ platform }}
+                                    </div>
+                                    <div style="font-size:0.75rem;
+                                                color:var(--gray-400);">
+                                        {{ handle }}
+                                    </div>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+            {# end right column #}
+
+
+        </div>
+        {# end contact grid #}
+
+    </div>
+</section>
+
+
+{# ── FAQ Section ───────────────────────────────────────────── #}
+<section style="padding:5rem 0;background:white;
+                border-top:1px solid var(--color-border);">
+    <div class="container">
+
+        <div style="text-align:center;margin-bottom:3rem;">
+            <h2 style="font-size:2rem;font-weight:900;
+                       color:var(--gray-900);margin-bottom:0.75rem;">
+                Frequently Asked Questions
+            </h2>
+            <p style="font-size:0.9375rem;color:var(--gray-500);
+                      max-width:480px;margin:0 auto;">
+                Quick answers to the questions we receive most often.
+            </p>
+        </div>
+
+        <div style="max-width:800px;margin:0 auto;
+                    display:flex;flex-direction:column;gap:1rem;">
+
+            {% set faqs = [
+                (
+                    'Is the platform free to use?',
+                    'Yes! Registration and enrollment in all currently '
+                    'available courses is completely free. There are no '
+                    'hidden fees or subscription charges. You can enroll '
+                    'in as many courses as you like at no cost.'
+                ),
+                (
+                    'Do I need a computer or can I use my phone?',
+                    'The platform is fully mobile-friendly and works on '
+                    'any smartphone, tablet, or computer. You can watch '
+                    'videos, read PDFs, submit assignments, and track '
+                    'your progress from any device with a web browser.'
+                ),
+                (
+                    'How do I submit an assignment?',
+                    'After enrolling in a course, go to My Assignments on '
+                    'your dashboard. Select the assignment you want to '
+                    'submit. You can type your answer directly into the '
+                    'text box or upload a document (PDF, Word, image). '
+                    'You can also do both at the same time.'
+                ),
+                (
+                    'How long does it take to receive a grade?',
+                    'Our instructors aim to grade submissions within '
+                    '48–72 hours of receipt. You will see your score and '
+                    'feedback appear on your submission page once graded. '
+                    'You can check your assignment status anytime from '
+                    'the Assignments section of your dashboard.'
+                ),
+                (
+                    'Can I download course materials for offline use?',
+                    'Yes. Most PDF documents and video materials have a '
+                    'download button available. Some materials may be '
+                    'set to view-only by the instructor. Downloaded '
+                    'materials can be accessed without internet once saved.'
+                ),
+                (
+                    'How do I receive my certificate?',
+                    'After completing all modules in a course and passing '
+                    'all required assignments, your certificate is issued '
+                    'automatically. You can download it from your '
+                    'progress page or dashboard. Certificates include '
+                    'your name, course title, and completion date.'
+                ),
+                (
+                    'I forgot my password. What should I do?',
+                    'Currently, password resets are handled by our support '
+                    'team. Please contact us at admin@agrilms.com with '
+                    'your registered email address and we will reset your '
+                    'password and send you a new temporary one within '
+                    '24 hours.'
+                ),
+                (
+                    'Can I suggest a new course topic?',
+                    'Absolutely! We welcome course suggestions from our '
+                    'learner community. Use the contact form above and '
+                    'select "Feedback and Suggestions" as the category. '
+                    'Tell us what topic you want to learn about and why '
+                    'it would be valuable for Nigerian farmers.'
+                ),
+            ] %}
+
+            {% for question, answer in faqs %}
+            <div class="faq-item"
+                 style="border:1px solid var(--color-border);
+                        border-radius:1rem;
+                        overflow:hidden;">
+
+                <button class="faq-question"
+                        style="width:100%;
+                               text-align:left;
+                               padding:1.25rem 1.5rem;
+                               background:var(--gray-50);
+                               border:none;
+                               cursor:pointer;
+                               display:flex;
+                               align-items:center;
+                               justify-content:space-between;
+                               gap:1rem;
+                               font-size:0.9375rem;
+                               font-weight:700;
+                               color:var(--gray-900);
+                               transition:background 0.15s;"
+                        aria-expanded="false">
+                    <span>{{ question }}</span>
+                    <span class="faq-icon"
+                          style="font-size:1.25rem;
+                                 flex-shrink:0;
+                                 transition:transform 0.3s;
+                                 color:var(--green-dark);">
+                        +
+                    </span>
+                </button>
+
+                <div class="faq-answer"
+                     style="display:none;
+                            padding:1.25rem 1.5rem;
+                            border-top:1px solid var(--color-border);
+                            background:white;">
+                    <p style="font-size:0.9rem;
+                              color:var(--gray-600);
+                              line-height:1.75;
+                              margin:0;">
+                        {{ answer }}
+                    </p>
+                </div>
+
+            </div>
+            {% endfor %}
+
+        </div>
+
+        {# Still have questions prompt #}
+        <div style="text-align:center;margin-top:3rem;">
+            <p style="font-size:0.9375rem;color:var(--gray-500);
+                      margin-bottom:1rem;">
+                Still have a question not answered above?
+            </p>
+            <a href="#contactForm"
+               class="btn btn-primary"
+               onclick="document.getElementById('sender_name').focus();">
+                ✉️ Send Us a Message
+            </a>
+        </div>
+
+    </div>
+</section>
+
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+'use strict';
+
+/* =============================================================
+   Contact Page — Scripts
+   ============================================================= */
+
+/* ── FAQ Accordion ───────────────────────────────────────── */
+document.querySelectorAll('.faq-question').forEach(function(btn) {
+
+    btn.addEventListener('click', function() {
+        const item    = this.closest('.faq-item');
+        const answer  = item.querySelector('.faq-answer');
+        const icon    = this.querySelector('.faq-icon');
+        const isOpen  = answer.style.display === 'block';
+
+        /* Close all other open items */
+        document.querySelectorAll('.faq-item').forEach(function(el) {
+            el.querySelector('.faq-answer').style.display = 'none';
+            el.querySelector('.faq-icon').textContent     = '+';
+            el.querySelector('.faq-icon').style.transform = 'rotate(0deg)';
+            el.querySelector('.faq-question').setAttribute(
+                'aria-expanded', 'false'
+            );
+            el.querySelector('.faq-question').style.background =
+                'var(--gray-50)';
+        });
+
+        /* Open this item if it was closed */
+        if (!isOpen) {
+            answer.style.display           = 'block';
+            icon.textContent               = '×';
+            icon.style.transform           = 'rotate(45deg)';
+            this.setAttribute('aria-expanded', 'true');
+            this.style.background          = 'var(--green-ghost)';
+        }
+    });
+
+    /* Hover effect */
+    btn.addEventListener('mouseenter', function() {
+        if (this.getAttribute('aria-expanded') !== 'true') {
+            this.style.background = 'var(--gray-100)';
+        }
+    });
+
+    btn.addEventListener('mouseleave', function() {
+        if (this.getAttribute('aria-expanded') !== 'true') {
+            this.style.background = 'var(--gray-50)';
+        }
+    });
+
+});
+
+
+/* ── Contact Form Validation and Submit ──────────────────── */
+document.getElementById('contactForm').addEventListener(
+    'submit',
+    function(e) {
+        const name     = document.getElementById('sender_name').value.trim();
+        const email    = document.getElementById('sender_email').value.trim();
+        const category = document.getElementById('category').value;
+        const subject  = document.getElementById('subject').value.trim();
+        const message  = document.getElementById('message').value.trim();
+
+        let valid  = true;
+        const errs = [];
+
+        if (!name || name.length < 2) {
+            errs.push('Please enter your full name.');
+            valid = false;
+        }
+
+        if (!email || !email.includes('@')) {
+            errs.push('Please enter a valid email address.');
+            valid = false;
+        }
+
+        if (!category) {
+            errs.push('Please select a message category.');
+            valid = false;
+        }
+
+        if (!subject || subject.length < 5) {
+            errs.push('Please enter a subject (at least 5 characters).');
+            valid = false;
+        }
+
+        if (!message || message.length < 20) {
+            errs.push('Please enter your message (at least 20 characters).');
+            valid = false;
+        }
+
+        if (!valid) {
+            e.preventDefault();
+            errs.forEach(function(err) {
+                showToast(err, 'danger', 6000);
+            });
+            return;
+        }
+
+        /* Show loading state */
+        const btn     = document.getElementById('contactSubmitBtn');
+        const btnText = document.getElementById('contactBtnText');
+        btn.disabled        = true;
+        btn.classList.add('loading');
+        btnText.textContent = 'Sending...';
+    }
+);
+
+
+/* ── Social link hover ────────────────────────────────────── */
+document.querySelectorAll('.social-link').forEach(function(link) {
+    link.addEventListener('mouseenter', function() {
+        this.style.background = 'var(--green-ghost)';
+    });
+    link.addEventListener('mouseleave', function() {
+        this.style.background = 'var(--gray-50)';
+    });
+});
+
+
+/* ── Responsive contact grid ──────────────────────────────── */
+(function() {
+    const grid = document.getElementById('contactGrid');
+    if (!grid) return;
+    function adj() {
+        grid.style.gridTemplateColumns =
+            window.innerWidth <= 991 ? '1fr' : '1fr 400px';
+    }
+    adj();
+    window.addEventListener('resize', adj);
+})();
+
+</script>
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+
+<div style="max-width:700px;margin:0 auto;">
+
+    <div style="margin-bottom:1.5rem;">
+        <a href="{{ url_for('admin.modules',
+                           course_id=selected_course_id if selected_course_id else '') }}"
+           style="color:var(--green-mid);font-size:0.875rem;text-decoration:none;">
+            ← Back to Modules
+        </a>
+        <div class="page-title" style="margin-top:0.5rem;">
+            <span class="title-icon">{% if action=='create' %}➕{% else %}✏️{% endif %}</span>
+            {{ title }}
+        </div>
+    </div>
+
+    <form method="POST" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-header">
+                <h2 class="card-header-title">📖 Module Details</h2>
+            </div>
+            <div class="card-body">
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Parent Course <span class="required">*</span>
+                    </label>
+                    <select name="course_id" class="form-control" required>
+                        <option value="">— Select Course —</option>
+                        {% for course in courses %}
+                        <option value="{{ course.id }}"
+                            {% if (module and module.course_id == course.id) or
+                                  selected_course_id == course.id %}
+                                selected{% endif %}>
+                            {{ course.title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Module Title <span class="required">*</span>
+                    </label>
+                    <input type="text" name="title" class="form-control"
+                           placeholder="e.g. Module 1: Introduction to Soil Types"
+                           value="{{ module.title if module else '' }}"
+                           required maxlength="300">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Order Number</label>
+                        <input type="number" name="order_number"
+                               class="form-control" min="1"
+                               placeholder="Auto-assigned if blank"
+                               value="{{ module.order_number if module else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            Duration (Minutes)
+                        </label>
+                        <input type="number" name="duration_minutes"
+                               class="form-control" min="1"
+                               placeholder="e.g. 45"
+                               value="{{ module.duration_minutes if module else '' }}">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-control"
+                              rows="3"
+                              placeholder="Brief overview of what this module covers...">{{ module.description if module else '' }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Learning Objectives</label>
+                    <textarea name="learning_objectives"
+                              class="form-control" rows="4"
+                              placeholder="One objective per line:
+Identify the three main soil types
+Test soil pH accurately
+Apply lime to correct acidic soil">{{ module.learning_objectives if module else '' }}</textarea>
+                    <span class="form-text">One objective per line.</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Notes for Learners
+                    </label>
+                    <textarea name="notes" class="form-control"
+                              rows="3"
+                              placeholder="Key takeaways, important reminders, or supplementary notes shown alongside materials...">{{ module.notes if module else '' }}</textarea>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-header">
+                <h2 class="card-header-title">⚙️ Module Settings</h2>
+            </div>
+            <div class="card-body">
+
+                <div class="info-card info-gold"
+                     style="margin-bottom:1.25rem;">
+                    <div class="info-card-icon">⚠️</div>
+                    <div class="info-card-content">
+                        <div class="info-card-title">
+                            Final Module Flag
+                        </div>
+                        <p class="info-card-text">
+                            Mark exactly ONE module per course as the
+                            "Final Module". When a learner completes
+                            this module, the system automatically marks
+                            the entire course as completed.
+                            Only one module per course should have this
+                            flag — setting it here will unset it on
+                            any other module in the same course.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="form-check-group horizontal">
+
+                    {% macro mcheck(name, label, checked) %}
+                    <label class="form-check">
+                        <input type="checkbox" class="form-check-input"
+                               name="{{ name }}"
+                               {% if checked %}checked{% endif %}>
+                        <span class="form-check-label">{{ label }}</span>
+                    </label>
+                    {% endmacro %}
+
+                    {{ mcheck('is_published', '🌐 Published',
+                        module.is_published if module else False) }}
+
+                    {{ mcheck('is_last_module', '🏁 Final Module of Course',
+                        module.is_last_module if module else False) }}
+
+                    {{ mcheck('is_free_preview', '👁️ Free Preview',
+                        module.is_free_preview if module else False) }}
+
+                </div>
+
+            </div>
+        </div>
+
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary btn-lg">
+                {% if action == 'create' %}➕ Create Module
+                {% else %}💾 Save Changes{% endif %}
+            </button>
+            <a href="{{ url_for('admin.modules',
+                               course_id=selected_course_id if selected_course_id else '') }}"
+               class="btn btn-light btn-lg">
+                Cancel
+            </a>
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

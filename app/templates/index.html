@@ -1,129 +1,1553 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ app_name }}</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #52b788 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .card {
-            background: white;
-            border-radius: 20px;
-            padding: 60px 80px;
-            text-align: center;
-            max-width: 700px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        .icon { font-size: 70px; margin-bottom: 20px; }
-        h1 { color: #1b4332; font-size: 2.2rem; margin-bottom: 12px; }
-        p { color: #555; font-size: 1.1rem; margin-bottom: 30px; line-height: 1.6; }
-        .badges { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 35px; }
-        .badge {
-            background: #e8f5e9;
-            color: #2d6a4f;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-        .badge.gold { background: #fff8e1; color: #f59f00; }
-        .badge.blue { background: #e3f2fd; color: #1565c0; }
-        .buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
-        .btn {
-            padding: 14px 35px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-primary { background: #2d6a4f; color: white; }
-        .btn-primary:hover { background: #1b4332; transform: translateY(-2px); }
-        .btn-outline {
-            background: transparent;
-            color: #2d6a4f;
-            border: 2px solid #2d6a4f;
-        }
-        .btn-outline:hover { background: #2d6a4f; color: white; transform: translateY(-2px); }
-        .status {
-            margin-top: 30px;
-            padding: 12px 20px;
-            background: #f0fff4;
-            border: 1px solid #b7ebc6;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            color: #2d6a4f;
-        }
-        .dot {
-            display: inline-block;
-            width: 10px; height: 10px;
-            background: #40c057;
-            border-radius: 50%;
-            margin-right: 8px;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-        .footer-note {
-            margin-top: 20px;
-            font-size: 0.8rem;
-            color: #aaa;
-        }
-    </style>
-</head>
-<body>
-    <div class="card">
+{% extends 'base.html' %}
 
-        <div class="icon">🌿</div>
+{# ============================================================
+   Agri LMS — Landing Page
+   ============================================================
+   File    : app/templates/index.html
+   Purpose : Public-facing homepage. The first page every
+             visitor sees. Introduces the platform, showcases
+             features, displays stats, and drives registration.
 
-        <h1>{{ app_name }}</h1>
+   Sections:
+       1. Hero — headline, description, CTA buttons
+       2. Trust bar — key platform facts
+       3. Features — platform capability cards
+       4. Stats — platform numbers
+       5. How It Works — 3-step process
+       6. Featured Courses — from database
+       7. CTA — final call to action
+       8. Page-specific scripts
+   ============================================================ #}
 
-        <p>
-            A modern agricultural learning management system for
-            indigenous and modern farming education. Enroll in courses,
-            learn through videos and PDFs, and submit assignments.
+{% block title %}Welcome — Learn Agriculture Online{% endblock %}
+
+{% block head_extra %}
+{# Landing page does not need the sidebar offset #}
+<style>
+    /* Override has-sidebar body class on landing page */
+    body.has-sidebar .page-content {
+        margin-left: 0 !important;
+    }
+    body .page-content {
+        padding: 0 !important;
+        min-height: unset;
+        background: transparent;
+    }
+    body .app-body {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ============================================================
+   SECTION 1 — HERO
+   Full-viewport green gradient hero with headline,
+   description, CTA buttons, and floating illustration.
+   ============================================================ #}
+<section class="landing-hero" aria-labelledby="heroHeading">
+    <div class="container">
+        <div class="landing-hero-inner">
+
+            {# ── Hero Text Content ── #}
+            <div class="landing-hero-content">
+
+                {# Eyebrow label #}
+                <div class="landing-eyebrow">
+                    <span>🌾</span>
+                    Agricultural Learning Platform
+                </div>
+
+                {# Main headline #}
+                <h1 class="landing-hero-title" id="heroHeading">
+                    Learn Farming the
+                    <span class="highlight">Right Way</span>,
+                    Anywhere, Anytime
+                </h1>
+
+                {# Subheadline #}
+                <p class="landing-hero-description">
+                    Access expert-created agricultural courses,
+                    watch farming videos, read research materials,
+                    submit assignments, and earn certificates —
+                    all on one modern learning platform built for
+                    African farmers and agriculture students.
+                </p>
+
+                {# CTA Buttons #}
+                <div class="landing-hero-actions">
+
+                    {% if current_user.is_authenticated %}
+
+                        {# Already logged in — go to dashboard #}
+                        {% if current_user.is_admin() %}
+                        <a href="{{ url_for('admin.dashboard') }}"
+                           class="btn btn-secondary btn-lg">
+                            🛡️ Go to Admin Dashboard
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('learner.dashboard') }}"
+                           class="btn btn-secondary btn-lg">
+                            📊 Go to My Dashboard
+                        </a>
+                        <a href="{{ url_for('courses.catalog') }}"
+                           class="btn btn-lg"
+                           style="background: rgba(255,255,255,0.15);
+                                  color: white;
+                                  border: 2px solid rgba(255,255,255,0.3);">
+                            📚 Browse Courses
+                        </a>
+                        {% endif %}
+
+                    {% else %}
+
+                        {# Not logged in — push registration #}
+                        <a href="{{ url_for('auth.register') }}"
+                           class="btn btn-secondary btn-lg">
+                            🌱 Start Learning Free
+                        </a>
+
+                        <a href="{{ url_for('courses.catalog') }}"
+                           class="btn btn-lg"
+                           style="background: rgba(255,255,255,0.12);
+                                  color: white;
+                                  border: 2px solid rgba(255,255,255,0.25);">
+                            📚 Browse Courses
+                        </a>
+
+                    {% endif %}
+
+                </div>
+                {# end CTA buttons #}
+
+                {# Social proof micro-stats under buttons #}
+                <div class="d-flex align-center gap-6 mt-6"
+                     style="flex-wrap: wrap;">
+
+                    <div class="d-flex align-center gap-2">
+                        <span style="font-size: 1.3rem;">👨‍🌾</span>
+                        <div>
+                            <div style="font-size: 1rem;
+                                        font-weight: 700;
+                                        color: white;">
+                                500+
+                            </div>
+                            <div style="font-size: 0.75rem;
+                                        color: rgba(255,255,255,0.65);">
+                                Active Learners
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="width: 1px; height: 36px;
+                                background: rgba(255,255,255,0.2);">
+                    </div>
+
+                    <div class="d-flex align-center gap-2">
+                        <span style="font-size: 1.3rem;">📚</span>
+                        <div>
+                            <div style="font-size: 1rem;
+                                        font-weight: 700;
+                                        color: white;">
+                                50+
+                            </div>
+                            <div style="font-size: 0.75rem;
+                                        color: rgba(255,255,255,0.65);">
+                                Courses Available
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="width: 1px; height: 36px;
+                                background: rgba(255,255,255,0.2);">
+                    </div>
+
+                    <div class="d-flex align-center gap-2">
+                        <span style="font-size: 1.3rem;">🎓</span>
+                        <div>
+                            <div style="font-size: 1rem;
+                                        font-weight: 700;
+                                        color: white;">
+                                200+
+                            </div>
+                            <div style="font-size: 0.75rem;
+                                        color: rgba(255,255,255,0.65);">
+                                Certificates Issued
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                {# end micro-stats #}
+
+            </div>
+            {# end hero content #}
+
+            {# ── Hero Illustration ── #}
+            <div class="landing-hero-illustration"
+                 aria-hidden="true">
+                🌾
+            </div>
+
+        </div>
+        {# end landing-hero-inner #}
+    </div>
+    {# end container #}
+
+    {# Decorative wave divider at the bottom of hero #}
+    <div style="position: absolute; bottom: -2px; left: 0;
+                right: 0; overflow: hidden; line-height: 0;">
+        <svg viewBox="0 0 1440 60"
+             xmlns="http://www.w3.org/2000/svg"
+             preserveAspectRatio="none"
+             style="width: 100%; height: 60px; display: block;">
+            <path d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z"
+                  fill="#f8f9fa"/>
+        </svg>
+    </div>
+
+</section>
+{# end hero #}
+
+
+{# ============================================================
+   SECTION 2 — TRUST BAR
+   Horizontal strip of key platform facts directly below hero.
+   ============================================================ #}
+<section style="background: #f8f9fa;
+                padding: 2rem 0;
+                border-bottom: 1px solid #e9ecef;"
+         aria-label="Platform highlights">
+    <div class="container">
+        <div class="d-flex justify-between align-center"
+             style="flex-wrap: wrap; gap: 1.5rem;">
+
+            {# Fact items #}
+            {% set trust_items = [
+                ('🎬', 'Video Lessons', 'Stream or download farming videos'),
+                ('📄', 'PDF Resources', 'Read and download study materials'),
+                ('📝', 'Assignments',   'Submit work and get graded'),
+                ('🏆', 'Certificates', 'Earn on course completion'),
+                ('📱', 'Mobile Ready', 'Learn on any device'),
+                ('🔒', 'Secure',       'Your data is always protected'),
+            ] %}
+
+            {% for icon, title, desc in trust_items %}
+            <div class="d-flex align-center gap-3"
+                 style="flex: 1; min-width: 160px;">
+
+                <div style="width: 44px; height: 44px;
+                            border-radius: 10px;
+                            background: var(--green-ghost);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 1.3rem;
+                            flex-shrink: 0;">
+                    {{ icon }}
+                </div>
+
+                <div>
+                    <div style="font-size: 0.875rem;
+                                font-weight: 700;
+                                color: var(--gray-800);">
+                        {{ title }}
+                    </div>
+                    <div style="font-size: 0.75rem;
+                                color: var(--gray-500);">
+                        {{ desc }}
+                    </div>
+                </div>
+
+            </div>
+            {% endfor %}
+
+        </div>
+    </div>
+</section>
+{# end trust bar #}
+
+
+{# ============================================================
+   SECTION 3 — FEATURES
+   Grid of platform capability cards with icons and descriptions.
+   ============================================================ #}
+<section class="features-section"
+         id="features"
+         aria-labelledby="featuresHeading">
+    <div class="container">
+
+        {# Section header #}
+        <div class="text-center mb-8">
+
+            <div style="display: inline-block;
+                        background: var(--green-ghost);
+                        color: var(--green-dark);
+                        padding: 4px 16px;
+                        border-radius: 999px;
+                        font-size: 0.8rem;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        margin-bottom: 1rem;">
+                Platform Features
+            </div>
+
+            <h2 id="featuresHeading"
+                style="font-size: 2.25rem;
+                       font-weight: 900;
+                       color: var(--gray-900);
+                       margin-bottom: 1rem;">
+                Everything You Need to
+                <span style="color: var(--green-dark);">
+                    Learn Agriculture
+                </span>
+            </h2>
+
+            <p class="lead"
+               style="max-width: 560px; margin: 0 auto;">
+                Our platform brings together video learning,
+                document resources, assignment submission, expert
+                grading, and progress tracking in one easy-to-use
+                agricultural education system.
+            </p>
+
+        </div>
+        {# end section header #}
+
+        {# Features grid #}
+        <div class="features-grid">
+
+            {# Feature data — (icon, color_class, title, description) #}
+            {% set features = [
+                (
+                    '🎬',
+                    'var(--blue-ghost)',
+                    'Video Learning',
+                    'Watch expert farming videos directly in your browser with our built-in HD video player. Download videos for offline learning when you have no internet access.'
+                ),
+                (
+                    '📄',
+                    'var(--red-ghost)',
+                    'PDF Documents',
+                    'Access farming guides, research papers, and study materials in PDF format. Read them online in the built-in PDF viewer or download to your device.'
+                ),
+                (
+                    '📝',
+                    'var(--gold-ghost)',
+                    'Assignment Submission',
+                    'Submit your assignments by typing your answer directly or uploading a document, image, or PDF file. Multiple submission formats supported.'
+                ),
+                (
+                    '✅',
+                    'var(--green-ghost)',
+                    'Expert Grading',
+                    'Receive detailed scores and written feedback from expert instructors on every assignment. View your grade breakdown and track improvement over time.'
+                ),
+                (
+                    '📊',
+                    'var(--orange-ghost)',
+                    'Progress Tracking',
+                    'Monitor your learning progress module by module. See completion percentages, time spent, assignment scores, and overall course progress in real time.'
+                ),
+                (
+                    '🏆',
+                    'var(--gold-ghost)',
+                    'Certificates',
+                    'Earn a completion certificate when you finish a course and pass all required assessments. Certificates confirm your agricultural knowledge and skills.'
+                ),
+                (
+                    '📚',
+                    'var(--blue-ghost)',
+                    'Structured Courses',
+                    'Learn through carefully structured courses organized into sequential modules. Each module builds on the last, ensuring comprehensive knowledge development.'
+                ),
+                (
+                    '🌾',
+                    'var(--green-ghost)',
+                    'Indigenous Knowledge',
+                    'Discover traditional African farming techniques, indigenous crop varieties, and generational agricultural wisdom preserved and taught by local experts.'
+                ),
+                (
+                    '📱',
+                    'var(--orange-ghost)',
+                    'Mobile Friendly',
+                    'Access all courses, videos, and materials from your smartphone or tablet. Our responsive platform works seamlessly on any screen size or device.'
+                ),
+            ] %}
+
+            {% for icon, bg, title, description in features %}
+            <div class="feature-card"
+                 role="article">
+
+                <div class="feature-icon"
+                     style="background: {{ bg }};"
+                     aria-hidden="true">
+                    {{ icon }}
+                </div>
+
+                <h3 class="feature-title">{{ title }}</h3>
+
+                <p class="feature-text">{{ description }}</p>
+
+            </div>
+            {% endfor %}
+
+        </div>
+        {# end features grid #}
+
+    </div>
+</section>
+{# end features section #}
+
+
+{# ============================================================
+   SECTION 4 — STATISTICS
+   Dark green band showing platform scale numbers.
+   ============================================================ #}
+<section class="stats-section"
+         aria-labelledby="statsHeading">
+    <div class="container">
+
+        <div class="text-center mb-8">
+            <h2 id="statsHeading"
+                style="font-size: 2rem;
+                       font-weight: 900;
+                       color: white;
+                       margin-bottom: 0.75rem;">
+                Trusted by Farmers Across Nigeria
+            </h2>
+            <p style="color: rgba(255,255,255,0.65);
+                      font-size: 1rem;
+                      max-width: 480px;
+                      margin: 0 auto;
+                      line-height: 1.625;">
+                Growing every day as more farmers and agriculture
+                students join our learning community.
+            </p>
+        </div>
+
+        {# Stats grid #}
+        <div class="stats-grid">
+
+            {% set stats = [
+                ('500+',  'Active Learners',       '👨‍🌾'),
+                ('50+',   'Expert Courses',         '📚'),
+                ('200+',  'Modules Available',      '📖'),
+                ('1,000+','Materials Uploaded',     '🎬'),
+                ('95%',   'Completion Rate',        '🏆'),
+                ('200+',  'Certificates Issued',    '🎓'),
+            ] %}
+
+            {% for value, label, icon in stats %}
+            <div class="stat-block">
+
+                <div style="font-size: 2rem;
+                            margin-bottom: 0.5rem;"
+                     aria-hidden="true">
+                    {{ icon }}
+                </div>
+
+                <div class="stat-block-value"
+                     data-count-to="{{ value }}">
+                    {{ value }}
+                </div>
+
+                <div class="stat-block-label">
+                    {{ label }}
+                </div>
+
+            </div>
+            {% endfor %}
+
+        </div>
+        {# end stats grid #}
+
+    </div>
+</section>
+{# end stats section #}
+
+{% endblock %}
+
+
+{# ============================================================
+   SECTION 5 — HOW IT WORKS
+   Three-step visual process showing how learners use
+   the platform from registration to certification.
+   ============================================================ #}
+<section style="padding: 5rem 0; background: white;"
+         id="how-it-works"
+         aria-labelledby="howHeading">
+    <div class="container">
+
+        {# Section header #}
+        <div class="text-center mb-8">
+
+            <div style="display: inline-block;
+                        background: var(--gold-ghost);
+                        color: var(--gold-dark);
+                        padding: 4px 16px;
+                        border-radius: 999px;
+                        font-size: 0.8rem;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        margin-bottom: 1rem;">
+                Simple Process
+            </div>
+
+            <h2 id="howHeading"
+                style="font-size: 2.25rem;
+                       font-weight: 900;
+                       color: var(--gray-900);
+                       margin-bottom: 1rem;">
+                Start Learning in
+                <span style="color: var(--gold-dark);">3 Easy Steps</span>
+            </h2>
+
+            <p class="lead"
+               style="max-width: 500px; margin: 0 auto;">
+                Getting started with agricultural learning
+                has never been simpler. No technical skills needed.
+            </p>
+
+        </div>
+        {# end section header #}
+
+        {# Steps grid #}
+        <div style="display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                    gap: 2rem;
+                    position: relative;">
+
+            {# Connecting line between steps (desktop only) #}
+            <div aria-hidden="true"
+                 style="position: absolute;
+                        top: 52px;
+                        left: calc(16.66% + 1rem);
+                        right: calc(16.66% + 1rem);
+                        height: 2px;
+                        background: linear-gradient(
+                            90deg,
+                            var(--green-pale),
+                            var(--gold-pale),
+                            var(--blue-pale)
+                        );
+                        display: none;">
+            </div>
+
+            {# Step data — (number, icon, color, title, description) #}
+            {% set steps = [
+                (
+                    '01',
+                    '🌱',
+                    'var(--green-dark)',
+                    'var(--green-ghost)',
+                    'Register Your Account',
+                    'Create your free learner account in under two minutes. Provide your name, email, and farming background to personalize your learning experience.'
+                ),
+                (
+                    '02',
+                    '📚',
+                    'var(--gold-dark)',
+                    'var(--gold-ghost)',
+                    'Enroll in a Course',
+                    'Browse the course catalog, choose a course that matches your farming goals, and enroll with one click. Instantly access all modules and materials.'
+                ),
+                (
+                    '03',
+                    '🎬',
+                    'var(--blue-dark)',
+                    'var(--blue-ghost)',
+                    'Learn Through Modules',
+                    'Work through each module in sequence. Watch videos, read PDF guides, and download reference materials at your own pace from any device.'
+                ),
+                (
+                    '04',
+                    '📝',
+                    'var(--orange-dark)',
+                    'var(--orange-ghost)',
+                    'Submit Assignments',
+                    'Complete assignments by typing your answer or uploading a document. Receive expert grading with detailed written feedback on your work.'
+                ),
+                (
+                    '05',
+                    '🏆',
+                    'var(--green-dark)',
+                    'var(--green-ghost)',
+                    'Earn Your Certificate',
+                    'Complete all modules and pass your assignments to receive a course completion certificate that demonstrates your agricultural expertise.'
+                ),
+            ] %}
+
+            {% for number, icon, color, bg, title, description in steps %}
+            <div style="display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        text-align: center;
+                        padding: 2rem 1.5rem;
+                        background: white;
+                        border: 1px solid var(--color-border);
+                        border-radius: 1.25rem;
+                        position: relative;
+                        transition: all 0.25s ease;
+                        box-shadow: var(--shadow-xs);"
+                 class="how-step-card"
+                 role="article">
+
+                {# Step number badge #}
+                <div style="position: absolute;
+                            top: -14px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            background: {{ color }};
+                            color: white;
+                            width: 28px;
+                            height: 28px;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 0.7rem;
+                            font-weight: 800;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.2);"
+                     aria-hidden="true">
+                    {{ number }}
+                </div>
+
+                {# Step icon #}
+                <div style="width: 72px;
+                            height: 72px;
+                            border-radius: 1.25rem;
+                            background: {{ bg }};
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 2rem;
+                            margin-bottom: 1.25rem;
+                            margin-top: 0.75rem;
+                            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);"
+                     aria-hidden="true">
+                    {{ icon }}
+                </div>
+
+                <h3 style="font-size: 1.05rem;
+                           font-weight: 700;
+                           color: var(--gray-900);
+                           margin-bottom: 0.75rem;
+                           line-height: 1.3;">
+                    {{ title }}
+                </h3>
+
+                <p style="font-size: 0.875rem;
+                          color: var(--gray-500);
+                          line-height: 1.625;
+                          margin: 0;">
+                    {{ description }}
+                </p>
+
+            </div>
+            {% endfor %}
+
+        </div>
+        {# end steps grid #}
+
+    </div>
+</section>
+{# end how it works #}
+
+
+{# ============================================================
+   SECTION 6 — FEATURED COURSES
+   Displays published and featured courses from the database.
+   Falls back to placeholder cards if no courses exist yet.
+   ============================================================ #}
+<section style="padding: 5rem 0;
+                background: var(--gray-50);
+                border-top: 1px solid var(--color-border);"
+         id="courses"
+         aria-labelledby="coursesHeading">
+    <div class="container">
+
+        {# Section header #}
+        <div class="d-flex justify-between align-center mb-8"
+             style="flex-wrap: wrap; gap: 1rem;">
+
+            <div>
+                <div style="display: inline-block;
+                            background: var(--blue-ghost);
+                            color: var(--blue-dark);
+                            padding: 4px 16px;
+                            border-radius: 999px;
+                            font-size: 0.8rem;
+                            font-weight: 700;
+                            text-transform: uppercase;
+                            letter-spacing: 0.08em;
+                            margin-bottom: 0.75rem;">
+                    Our Courses
+                </div>
+
+                <h2 id="coursesHeading"
+                    style="font-size: 2rem;
+                           font-weight: 900;
+                           color: var(--gray-900);
+                           margin-bottom: 0.5rem;">
+                    Featured Agricultural Courses
+                </h2>
+
+                <p style="color: var(--gray-500);
+                          font-size: 0.9375rem;
+                          margin: 0;
+                          max-width: 480px;
+                          line-height: 1.625;">
+                    Expert-created courses covering crop production,
+                    livestock management, soil science, irrigation,
+                    and indigenous farming practices.
+                </p>
+            </div>
+
+            <a href="{{ url_for('courses.catalog') }}"
+               class="btn btn-outline-primary"
+               aria-label="View all available courses">
+                View All Courses →
+            </a>
+
+        </div>
+        {# end section header #}
+
+        {# ── Course Cards ── #}
+        {% if featured_courses and featured_courses | length > 0 %}
+
+            {# Real courses from database #}
+            <div style="display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                        gap: 1.5rem;">
+
+                {% for course in featured_courses %}
+                <article class="card course-card"
+                         aria-label="{{ course.title }}">
+
+                    {# Course thumbnail #}
+                    <div class="course-card-thumbnail">
+
+                        {% if course.thumbnail and
+                              course.thumbnail != 'default_course.png' %}
+                            <img src="{{ url_for('static',
+                                        filename='uploads/thumbnails/' + course.thumbnail) }}"
+                                 alt="{{ course.title }} course thumbnail"
+                                 loading="lazy">
+                        {% else %}
+                            {# Emoji fallback by category #}
+                            {% set cat_icons = {
+                                'Crop Production':      '🌽',
+                                'Livestock':            '🐄',
+                                'Soil Science':         '🌍',
+                                'Irrigation':           '💧',
+                                'Pest Control':         '🦟',
+                                'Organic Farming':      '🌿',
+                                'Agroforestry':         '🌳',
+                                'Indigenous Practices': '🏺',
+                                'Poultry':              '🐔',
+                                'Fishery':              '🐟',
+                            } %}
+                            <span style="font-size: 4rem;" aria-hidden="true">
+                                {{ cat_icons.get(course.category, '🌾') }}
+                            </span>
+                        {% endif %}
+
+                        {# Level badge overlay #}
+                        <span class="course-card-level">
+                            {{ course.level | capitalize
+                               if course.level else 'Beginner' }}
+                        </span>
+
+                    </div>
+                    {# end thumbnail #}
+
+                    {# Card body #}
+                    <div class="course-card-body">
+
+                        <div class="course-card-category">
+                            {{ course.category or 'Agriculture' }}
+                        </div>
+
+                        <h3 class="course-card-title">
+                            {{ course.title }}
+                        </h3>
+
+                        <p class="course-card-description">
+                            {{ course.short_description }}
+                        </p>
+
+                        {# Course meta — modules, duration #}
+                        <div class="course-card-meta">
+
+                            <div class="course-card-meta-item">
+                                <span aria-hidden="true">📖</span>
+                                <span>
+                                    {{ course.get_published_modules_count() }}
+                                    module{{ 's' if course.get_published_modules_count() != 1 }}
+                                </span>
+                            </div>
+
+                            {% if course.duration_weeks %}
+                            <div class="course-card-meta-item">
+                                <span aria-hidden="true">⏱️</span>
+                                <span>
+                                    {{ course.duration_weeks }}
+                                    week{{ 's' if course.duration_weeks != 1 }}
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            <div class="course-card-meta-item">
+                                <span aria-hidden="true">👥</span>
+                                <span>
+                                    {{ course.get_total_enrollments() }}
+                                    enrolled
+                                </span>
+                            </div>
+
+                        </div>
+                        {# end meta #}
+
+                    </div>
+                    {# end card body #}
+
+                    {# Card footer #}
+                    <div class="course-card-footer">
+
+                        {% if current_user.is_authenticated %}
+                            {% if current_user.is_enrolled_in(course.id) %}
+                                <span class="badge badge-success">
+                                    ✅ Enrolled
+                                </span>
+                                <a href="{{ url_for('courses.course_detail',
+                                                   course_id=course.id) }}"
+                                   class="btn btn-primary btn-sm">
+                                    Continue →
+                                </a>
+                            {% else %}
+                                <span class="badge badge-light">
+                                    {% if course.is_enrollment_available() %}
+                                        Open
+                                    {% else %}
+                                        Closed
+                                    {% endif %}
+                                </span>
+                                <a href="{{ url_for('courses.course_detail',
+                                                   course_id=course.id) }}"
+                                   class="btn btn-primary btn-sm">
+                                    View Course →
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge badge-green">
+                                Free Enrollment
+                            </span>
+                            <a href="{{ url_for('auth.register') }}"
+                               class="btn btn-primary btn-sm">
+                                Enroll Now →
+                            </a>
+                        {% endif %}
+
+                    </div>
+                    {# end card footer #}
+
+                </article>
+                {% endfor %}
+
+            </div>
+            {# end course cards grid #}
+
+        {% else %}
+
+            {# ── Placeholder cards shown before any courses are created ── #}
+            <div style="display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                        gap: 1.5rem;">
+
+                {% set placeholder_courses = [
+                    (
+                        '🌽',
+                        'Beginner',
+                        'Crop Production',
+                        'Introduction to Crop Production',
+                        'Learn the fundamentals of planting, nurturing, and harvesting major food crops including maize, cassava, rice, and yam using both traditional and modern methods.',
+                        8, 6
+                    ),
+                    (
+                        '🐄',
+                        'Intermediate',
+                        'Livestock',
+                        'Livestock Management Fundamentals',
+                        'Comprehensive guide to managing cattle, goats, sheep, and poultry. Covers feeding, health management, vaccination, breeding, and production record keeping.',
+                        10, 4
+                    ),
+                    (
+                        '🌍',
+                        'Beginner',
+                        'Soil Science',
+                        'Understanding Soil Health & Fertility',
+                        'Discover how to assess, improve, and maintain soil fertility for maximum crop yield. Includes organic and inorganic amendment strategies suited to Nigerian soils.',
+                        6, 3
+                    ),
+                    (
+                        '💧',
+                        'Intermediate',
+                        'Irrigation',
+                        'Modern Irrigation Techniques',
+                        'Explore drip irrigation, sprinkler systems, and traditional water management methods. Learn to set up, maintain, and optimize irrigation for dry season farming.',
+                        8, 5
+                    ),
+                    (
+                        '🌿',
+                        'Advanced',
+                        'Organic Farming',
+                        'Organic and Sustainable Farming',
+                        'Master the principles of organic farming, composting, natural pest control, and sustainable agriculture practices that protect the environment and improve yields.',
+                        12, 7
+                    ),
+                    (
+                        '🏺',
+                        'Intermediate',
+                        'Indigenous Practices',
+                        'Indigenous Farming Knowledge',
+                        'Preserve and apply traditional African agricultural wisdom including indigenous seed selection, natural pest management, intercropping, and seasonal farming calendars.',
+                        10, 6
+                    ),
+                ] %}
+
+                {% for icon, level, category, title, desc, modules, weeks in placeholder_courses %}
+                <article class="card course-card"
+                         aria-label="{{ title }} — sample course">
+
+                    {# Thumbnail #}
+                    <div class="course-card-thumbnail">
+                        <span style="font-size: 4rem;"
+                              aria-hidden="true">
+                            {{ icon }}
+                        </span>
+                        <span class="course-card-level">
+                            {{ level }}
+                        </span>
+                    </div>
+
+                    {# Body #}
+                    <div class="course-card-body">
+
+                        <div class="course-card-category">
+                            {{ category }}
+                        </div>
+
+                        <h3 class="course-card-title">
+                            {{ title }}
+                        </h3>
+
+                        <p class="course-card-description">
+                            {{ desc }}
+                        </p>
+
+                        <div class="course-card-meta">
+                            <div class="course-card-meta-item">
+                                <span aria-hidden="true">📖</span>
+                                <span>{{ modules }} modules</span>
+                            </div>
+                            <div class="course-card-meta-item">
+                                <span aria-hidden="true">⏱️</span>
+                                <span>{{ weeks }} weeks</span>
+                            </div>
+                            <div class="course-card-meta-item">
+                                <span aria-hidden="true">👥</span>
+                                <span>Open enrollment</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {# Footer #}
+                    <div class="course-card-footer">
+                        <span class="badge badge-green">
+                            Free Enrollment
+                        </span>
+                        <a href="{{ url_for('auth.register') }}"
+                           class="btn btn-primary btn-sm">
+                            Enroll Now →
+                        </a>
+                    </div>
+
+                </article>
+                {% endfor %}
+
+            </div>
+            {# end placeholder grid #}
+
+            {# Notice that these are sample courses #}
+            <div class="text-center mt-6">
+                <p style="font-size: 0.8rem;
+                          color: var(--gray-400);
+                          font-style: italic;">
+                    Sample courses shown above.
+                    {% if current_user.is_authenticated and current_user.is_admin() %}
+                        <a href="{{ url_for('admin.courses') }}"
+                           style="color: var(--green-mid);">
+                            Create your first course →
+                        </a>
+                    {% else %}
+                        Register to access real courses when they become available.
+                    {% endif %}
+                </p>
+            </div>
+
+        {% endif %}
+        {# end course cards #}
+
+    </div>
+</section>
+{# end featured courses #}
+
+
+{# ============================================================
+   SECTION 7 — TESTIMONIAL / QUOTE
+   Single impactful quote from a learner or expert.
+   ============================================================ #}
+<section style="padding: 5rem 0; background: white;"
+         aria-label="Learner testimonial">
+    <div class="container">
+        <div style="max-width: 760px;
+                    margin: 0 auto;
+                    text-align: center;">
+
+            {# Opening quote mark #}
+            <div style="font-size: 5rem;
+                        line-height: 1;
+                        color: var(--green-pale);
+                        font-family: Georgia, serif;
+                        margin-bottom: -1rem;"
+                 aria-hidden="true">
+                "
+            </div>
+
+            <blockquote style="font-size: 1.375rem;
+                               font-weight: 500;
+                               color: var(--gray-700);
+                               line-height: 1.625;
+                               font-style: italic;
+                               margin-bottom: 2rem;
+                               border: none;
+                               padding: 0;">
+                This platform changed how I manage my farm.
+                The video lessons on soil management and the
+                irrigation module helped me increase my cassava
+                yield by over 40% in a single season. I never
+                thought online learning could be this practical
+                for a working farmer like me.
+            </blockquote>
+
+            {# Attribution #}
+            <div class="d-flex align-center justify-center gap-3">
+
+                <div style="width: 52px;
+                            height: 52px;
+                            border-radius: 50%;
+                            background: var(--green-mid);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 1.5rem;
+                            font-weight: 700;
+                            color: white;
+                            flex-shrink: 0;">
+                    A
+                </div>
+
+                <div style="text-align: left;">
+                    <div style="font-weight: 700;
+                                color: var(--gray-900);
+                                font-size: 0.9375rem;">
+                        Adewale Okafor
+                    </div>
+                    <div style="font-size: 0.8125rem;
+                                color: var(--gray-500);">
+                        Smallholder Farmer — Ogun State, Nigeria
+                    </div>
+                </div>
+
+            </div>
+            {# end attribution #}
+
+        </div>
+    </div>
+</section>
+{# end testimonial #}
+
+
+{# ============================================================
+   SECTION 8 — CATEGORY QUICK LINKS
+   Grid of course category shortcuts for quick navigation.
+   ============================================================ #}
+<section style="padding: 4rem 0;
+                background: var(--gray-50);
+                border-top: 1px solid var(--color-border);"
+         aria-labelledby="categoriesHeading">
+    <div class="container">
+
+        <div class="text-center mb-6">
+            <h2 id="categoriesHeading"
+                style="font-size: 1.75rem;
+                       font-weight: 800;
+                       color: var(--gray-900);
+                       margin-bottom: 0.5rem;">
+                Browse by Topic
+            </h2>
+            <p style="color: var(--gray-500); margin: 0;">
+                Find courses that match your farming interests
+            </p>
+        </div>
+
+        <div style="display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                    gap: 1rem;">
+
+            {% set categories = [
+                ('🌽', 'Crop Production',      'var(--green-ghost)',  'var(--green-dark)'),
+                ('🐄', 'Livestock Management', 'var(--blue-ghost)',   'var(--blue-dark)'),
+                ('🌍', 'Soil Science',          'var(--gold-ghost)',   'var(--gold-dark)'),
+                ('💧', 'Irrigation',            'var(--blue-ghost)',   'var(--blue-dark)'),
+                ('🦟', 'Pest & Disease',        'var(--red-ghost)',    'var(--red-dark)'),
+                ('🌿', 'Organic Farming',       'var(--green-ghost)',  'var(--green-dark)'),
+                ('🌳', 'Agroforestry',          'var(--green-ghost)',  'var(--green-dark)'),
+                ('🏺', 'Indigenous Practices',  'var(--orange-ghost)', 'var(--orange-dark)'),
+                ('🐔', 'Poultry Farming',       'var(--gold-ghost)',   'var(--gold-dark)'),
+                ('🐟', 'Fishery & Aquaculture', 'var(--blue-ghost)',   'var(--blue-dark)'),
+            ] %}
+
+            {% for icon, name, bg, color in categories %}
+            <a href="{{ url_for('courses.catalog') }}?category={{ name | urlencode }}"
+               style="display: flex;
+                      flex-direction: column;
+                      align-items: center;
+                      gap: 0.625rem;
+                      padding: 1.25rem 1rem;
+                      background: white;
+                      border: 1px solid var(--color-border);
+                      border-radius: 1rem;
+                      text-decoration: none;
+                      text-align: center;
+                      transition: all 0.25s ease;
+                      box-shadow: var(--shadow-xs);"
+               class="category-link"
+               aria-label="Browse {{ name }} courses">
+
+                <div style="width: 52px;
+                            height: 52px;
+                            border-radius: 0.875rem;
+                            background: {{ bg }};
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 1.5rem;
+                            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);">
+                    {{ icon }}
+                </div>
+
+                <span style="font-size: 0.8125rem;
+                             font-weight: 600;
+                             color: {{ color }};
+                             line-height: 1.3;">
+                    {{ name }}
+                </span>
+
+            </a>
+            {% endfor %}
+
+        </div>
+        {# end categories grid #}
+
+    </div>
+</section>
+{# end categories section #}
+
+
+{# ============================================================
+   SECTION 9 — CTA (CALL TO ACTION)
+   Final registration push for unauthenticated visitors.
+   Hidden for logged-in users.
+   ============================================================ #}
+{% if not current_user.is_authenticated %}
+<section class="cta-section"
+         aria-labelledby="ctaHeading">
+    <div class="container">
+
+        {# Large decorative icon #}
+        <div style="font-size: 4rem;
+                    margin-bottom: 1.5rem;
+                    animation: float 5s ease-in-out infinite;"
+             aria-hidden="true">
+            🌾
+        </div>
+
+        <h2 class="cta-title" id="ctaHeading">
+            Ready to Transform Your Farming?
+        </h2>
+
+        <p class="cta-text">
+            Join thousands of farmers and agriculture students
+            who are already learning with Agri LMS. Create your
+            free account today and start your first course in minutes.
         </p>
 
-        <div class="badges">
-            <span class="badge">🎓 Course Learning</span>
-            <span class="badge gold">📹 Video Streaming</span>
-            <span class="badge blue">📄 PDF Viewer</span>
-            <span class="badge">📝 Assignment Submission</span>
-            <span class="badge gold">✅ Admin Grading</span>
-            <span class="badge blue">📊 Progress Tracking</span>
-        </div>
+        {# CTA Buttons #}
+        <div class="cta-buttons">
 
-        <div class="buttons">
-            <a href="/auth/register" class="btn btn-primary">
-                🌱 Get Started — Register
+            <a href="{{ url_for('auth.register') }}"
+               class="btn btn-primary btn-lg">
+                🌱 Create Free Account
             </a>
-            <a href="/auth/login" class="btn btn-outline">
-                🔑 Log In
+
+            <a href="{{ url_for('auth.login') }}"
+               class="btn btn-outline-primary btn-lg">
+                🔑 Already have an account? Log In
             </a>
+
         </div>
 
-        <div class="status">
-            <span class="dot"></span>
-            Phase 3 Complete — Application running successfully.
-            Database connected. All {{ current_year }} systems operational.
-        </div>
-
-        <p class="footer-note">
-            © {{ current_year }} {{ app_name }} — Agricultural Education Platform
+        {# Reassurance text under buttons #}
+        <p style="margin-top: 1.5rem;
+                  font-size: 0.8125rem;
+                  color: var(--gray-500);">
+            ✅ Free to join &nbsp;&nbsp;
+            ✅ No credit card required &nbsp;&nbsp;
+            ✅ Cancel anytime
         </p>
 
     </div>
-</body>
-</html>
+</section>
+{% endif %}
+{# end CTA section #}
+
+
+{# ============================================================
+   PAGE-SPECIFIC SCRIPTS
+   Landing page animations and interactivity.
+   ============================================================ #}
+{% block scripts %}
+<script>
+/* =============================================================
+   Landing Page — Page Scripts
+   Handles:
+       - How-it-works card hover animations
+       - Category link hover effects
+       - Count-up animation for stat numbers
+       - Intersection Observer for scroll animations
+   ============================================================= */
+
+'use strict';
+
+/* ── 1. HOW-IT-WORKS CARD HOVER ─────────────────────────── */
+document.querySelectorAll('.how-step-card').forEach(function(card) {
+
+    card.addEventListener('mouseenter', function() {
+        this.style.transform   = 'translateY(-6px)';
+        this.style.boxShadow   = 'var(--shadow-xl)';
+        this.style.borderColor = 'var(--green-pale)';
+
+        const icon = this.querySelector('div:nth-child(2)');
+        if (icon) icon.style.transform = 'scale(1.12) rotate(-5deg)';
+    });
+
+    card.addEventListener('mouseleave', function() {
+        this.style.transform   = '';
+        this.style.boxShadow   = '';
+        this.style.borderColor = '';
+
+        const icon = this.querySelector('div:nth-child(2)');
+        if (icon) icon.style.transform = '';
+    });
+
+});
+
+
+/* ── 2. CATEGORY LINK HOVER ─────────────────────────────── */
+document.querySelectorAll('.category-link').forEach(function(link) {
+
+    link.addEventListener('mouseenter', function() {
+        this.style.transform   = 'translateY(-4px)';
+        this.style.boxShadow   = 'var(--shadow-lg)';
+        this.style.borderColor = 'var(--green-pale)';
+
+        const icon = this.querySelector('div');
+        if (icon) icon.style.transform = 'scale(1.1) rotate(-5deg)';
+    });
+
+    link.addEventListener('mouseleave', function() {
+        this.style.transform   = '';
+        this.style.boxShadow   = '';
+        this.style.borderColor = '';
+
+        const icon = this.querySelector('div');
+        if (icon) icon.style.transform = '';
+    });
+
+});
+
+
+/* ── 3. COUNT-UP ANIMATION FOR STATS ───────────────────── */
+/**
+ * Animate a numeric stat element from 0 to its target value.
+ * Handles suffixes like '+', '%', ',' automatically.
+ *
+ * @param {HTMLElement} el      - The element to animate
+ * @param {number}      target  - The target numeric value
+ * @param {string}      suffix  - Any suffix to append ('+', '%', etc.)
+ * @param {number}      duration - Animation duration in ms
+ */
+function animateCount(el, target, suffix, duration) {
+    suffix   = suffix   || '';
+    duration = duration || 1800;
+
+    const start     = 0;
+    const startTime = performance.now();
+
+    /* Easing function — ease out cubic */
+    function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+
+    function update(currentTime) {
+        const elapsed  = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased    = easeOutCubic(progress);
+        const current  = Math.round(start + (target - start) * eased);
+
+        /* Format with comma thousands separator */
+        el.textContent = current.toLocaleString('en-NG') + suffix;
+
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        } else {
+            /* Ensure exact final value */
+            el.textContent = target.toLocaleString('en-NG') + suffix;
+        }
+    }
+
+    requestAnimationFrame(update);
+}
+
+/* Parse stat values from their display text */
+function parseStatValue(text) {
+    /* Extract number and suffix from strings like '500+', '95%', '1,000+' */
+    const cleaned = text.replace(/,/g, '');
+    const match   = cleaned.match(/^([\d.]+)(.*)$/);
+
+    if (!match) return { value: 0, suffix: '' };
+
+    return {
+        value:  parseFloat(match[1]),
+        suffix: match[2].trim()
+    };
+}
+
+
+/* ── 4. INTERSECTION OBSERVER — SCROLL ANIMATIONS ────────── */
+/**
+ * Triggers animations when elements scroll into the viewport.
+ * Used for:
+ *   - Stat count-up numbers
+ *   - Feature card fade-in
+ *   - Step card fade-in
+ */
+(function() {
+
+    /* ── Stat count-up observer ── */
+    const statValues = document.querySelectorAll('.stat-block-value');
+
+    if ('IntersectionObserver' in window && statValues.length > 0) {
+
+        const statsObserver = new IntersectionObserver(
+            function(entries, observer) {
+                entries.forEach(function(entry) {
+                    if (!entry.isIntersecting) return;
+
+                    const el      = entry.target;
+                    const parsed  = parseStatValue(el.textContent);
+
+                    /* Start count-up animation */
+                    animateCount(el, parsed.value, parsed.suffix, 1800);
+
+                    /* Only animate once */
+                    observer.unobserve(el);
+                });
+            },
+            { threshold: 0.5 }
+        );
+
+        statValues.forEach(function(el) {
+            statsObserver.observe(el);
+        });
+    }
+
+
+    /* ── Feature card fade-in observer ── */
+    const featureCards = document.querySelectorAll('.feature-card');
+
+    if ('IntersectionObserver' in window && featureCards.length > 0) {
+
+        /* Set initial state */
+        featureCards.forEach(function(card, index) {
+            card.style.opacity   = '0';
+            card.style.transform = 'translateY(24px)';
+            card.style.transition =
+                'opacity 0.5s ease ' + (index * 0.08) + 's, ' +
+                'transform 0.5s ease ' + (index * 0.08) + 's';
+        });
+
+        const cardsObserver = new IntersectionObserver(
+            function(entries, observer) {
+                entries.forEach(function(entry) {
+                    if (!entry.isIntersecting) return;
+
+                    entry.target.style.opacity   = '1';
+                    entry.target.style.transform = 'translateY(0)';
+
+                    observer.unobserve(entry.target);
+                });
+            },
+            { threshold: 0.15 }
+        );
+
+        featureCards.forEach(function(card) {
+            cardsObserver.observe(card);
+        });
+    }
+
+
+    /* ── How-it-works step card fade-in observer ── */
+    const stepCards = document.querySelectorAll('.how-step-card');
+
+    if ('IntersectionObserver' in window && stepCards.length > 0) {
+
+        stepCards.forEach(function(card, index) {
+            card.style.opacity   = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition =
+                'opacity 0.45s ease ' + (index * 0.1) + 's, ' +
+                'transform 0.45s ease ' + (index * 0.1) + 's, ' +
+                'box-shadow 0.25s ease, ' +
+                'border-color 0.25s ease';
+        });
+
+        const stepsObserver = new IntersectionObserver(
+            function(entries, observer) {
+                entries.forEach(function(entry) {
+                    if (!entry.isIntersecting) return;
+
+                    entry.target.style.opacity   = '1';
+                    entry.target.style.transform = 'translateY(0)';
+
+                    observer.unobserve(entry.target);
+                });
+            },
+            { threshold: 0.2 }
+        );
+
+        stepCards.forEach(function(card) {
+            stepsObserver.observe(card);
+        });
+    }
+
+
+    /* ── Course card fade-in observer ── */
+    const courseCards = document.querySelectorAll('.course-card');
+
+    if ('IntersectionObserver' in window && courseCards.length > 0) {
+
+        courseCards.forEach(function(card, index) {
+            card.style.opacity   = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition =
+                'opacity 0.5s ease ' + (index * 0.1) + 's, ' +
+                'transform 0.5s ease ' + (index * 0.1) + 's, ' +
+                'box-shadow 0.25s ease, ' +
+                'border-color 0.25s ease';
+        });
+
+        const coursesObserver = new IntersectionObserver(
+            function(entries, observer) {
+                entries.forEach(function(entry) {
+                    if (!entry.isIntersecting) return;
+
+                    entry.target.style.opacity   = '1';
+                    entry.target.style.transform = 'translateY(0)';
+
+                    observer.unobserve(entry.target);
+                });
+            },
+            { threshold: 0.1 }
+        );
+
+        courseCards.forEach(function(card) {
+            coursesObserver.observe(card);
+        });
+    }
+
+})();
+
+
+/* ── 5. SMOOTH SCROLL FOR ANCHOR LINKS ──────────────────── */
+document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+    anchor.addEventListener('click', function(e) {
+        const target = document.querySelector(this.getAttribute('href'));
+        if (!target) return;
+
+        e.preventDefault();
+
+        target.scrollIntoView({
+            behavior: 'smooth',
+            block:    'start'
+        });
+    });
+});
+
+
+/* ── 6. HERO ENTRANCE ANIMATION ──────────────────────────── */
+(function() {
+    const heroContent = document.querySelector('.landing-hero-content');
+    if (!heroContent) return;
+
+    heroContent.style.opacity   = '0';
+    heroContent.style.transform = 'translateY(30px)';
+    heroContent.style.transition = 'opacity 0.7s ease, transform 0.7s ease';
+
+    /* Trigger after a short delay for natural feel */
+    setTimeout(function() {
+        heroContent.style.opacity   = '1';
+        heroContent.style.transform = 'translateY(0)';
+    }, 150);
+})();
+
+
+/* ── 7. COURSE CARD HOVER ENHANCEMENT ────────────────────── */
+document.querySelectorAll('.course-card').forEach(function(card) {
+
+    card.addEventListener('mouseenter', function() {
+        const thumbnail = this.querySelector('.course-card-thumbnail');
+        if (thumbnail) {
+            thumbnail.style.transform  = 'scale(1.03)';
+            thumbnail.style.transition = 'transform 0.4s ease';
+        }
+    });
+
+    card.addEventListener('mouseleave', function() {
+        const thumbnail = this.querySelector('.course-card-thumbnail');
+        if (thumbnail) {
+            thumbnail.style.transform = 'scale(1)';
+        }
+    });
+
+});
+
+</script>
+{% endblock %}
+{# end scripts block #}

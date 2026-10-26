@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% block title %}Manage Assignments{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;
+            justify-content:space-between;
+            margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
+    <div>
+        <div class="page-title">
+            <span class="title-icon">📝</span> Manage Assignments
+        </div>
+        <p class="page-subtitle">
+            Create assignments, set deadlines, and manage submissions.
+        </p>
+    </div>
+    <a href="{{ url_for('admin.create_assignment',
+                       course_id=selected_course_id if selected_course_id else '') }}"
+       class="btn btn-primary btn-lg">
+        ➕ Create Assignment
+    </a>
+</div>
+
+{# Course filter #}
+<div class="card" style="margin-bottom:1.5rem;">
+    <div class="card-body compact">
+        <form method="GET"
+              style="display:flex;gap:0.875rem;align-items:flex-end;flex-wrap:wrap;">
+            <div class="form-group" style="margin:0;min-width:220px;">
+                <label class="form-label" style="font-size:0.75rem;">
+                    Filter by Course
+                </label>
+                <select name="course_id" class="form-control"
+                        onchange="this.form.submit()">
+                    <option value="">All Courses</option>
+                    {% for course in courses %}
+                    <option value="{{ course.id }}"
+                        {% if selected_course_id == course.id %}selected{% endif %}>
+                        {{ course.title }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if selected_course_id %}
+            <a href="{{ url_for('admin.assignments') }}"
+               class="btn btn-light">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{# Assignments table #}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-header-title">
+            Assignments
+            <span class="badge badge-light badge-sm" style="margin-left:0.5rem;">
+                {{ assignments | length }}
+            </span>
+        </h2>
+    </div>
+
+    {% if assignments %}
+    <div class="table-wrapper"
+         style="border-radius:0;border:none;box-shadow:none;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Assignment</th>
+                    <th>Course</th>
+                    <th>Type</th>
+                    <th>Marks</th>
+                    <th>Deadline</th>
+                    <th>Submissions</th>
+                    <th>Pending</th>
+                    <th>Status</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asgn in assignments %}
+                <tr>
+                    <td>
+                        <div style="font-weight:700;color:var(--gray-900);
+                                    max-width:220px;white-space:nowrap;
+                                    overflow:hidden;text-overflow:ellipsis;">
+                            {{ asgn.title }}
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--gray-400);">
+                            {{ asgn.description | truncate_words(6) }}
+                        </div>
+                    </td>
+                    <td style="font-size:0.8125rem;color:var(--gray-500);">
+                        {{ asgn.course.title if asgn.course else '—' }}
+                    </td>
+                    <td>
+                        <span class="badge badge-light badge-sm">
+                            {{ asgn.get_submission_type_label() }}
+                        </span>
+                    </td>
+                    <td style="font-weight:700;color:var(--green-dark);">
+                        {{ asgn.total_marks | int }}
+                    </td>
+                    <td style="font-size:0.8125rem;">
+                        {% if asgn.due_date %}
+                        <span class="{% if asgn.is_past_due() %}
+                                         text-danger{% endif %}">
+                            {{ asgn.due_date | dateformat('%d %b %Y') }}
+                        </span>
+                        {% else %}
+                        <span style="color:var(--gray-300);">No deadline</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:center;font-weight:700;
+                               color:var(--blue-dark);">
+                        {{ asgn.get_total_submissions() }}
+                    </td>
+                    <td style="text-align:center;">
+                        {% set pending = asgn.get_pending_submissions_count() %}
+                        {% if pending > 0 %}
+                        <span class="badge badge-solid-orange">
+                            {{ pending }}
+                        </span>
+                        {% else %}
+                        <span style="color:var(--gray-300);">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge
+                            {{ asgn.get_status_badge_class() }}">
+                            {{ asgn.status | capitalize }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="cell-actions">
+                            <a href="{{ url_for('admin.edit_assignment',
+                                               assignment_id=asgn.id) }}"
+                               class="btn btn-primary btn-xs">Edit</a>
+
+                            <a href="{{ url_for('admin.submissions') }}?filter=pending"
+                               class="btn btn-warning btn-xs">
+                                Grade
+                            </a>
+
+                            <form method="POST"
+                                  action="{{ url_for('admin.delete_assignment',
+                                                   assignment_id=asgn.id) }}"
+                                  style="display:inline;"
+                                  data-confirm="Delete '{{ asgn.title }}'? All submissions will also be deleted.">
+                                <input type="hidden" name="csrf_token"
+                                       value="{{ csrf_token() }}">
+                                <button type="submit"
+                                        class="btn btn-danger btn-xs">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body">
+        <div class="empty-state">
+            <span class="empty-state-illustration">📝</span>
+            <h2 class="empty-state-title">No Assignments Yet</h2>
+            <p class="empty-state-text">
+                Create assignments for your published courses.
+            </p>
+            <a href="{{ url_for('admin.create_assignment') }}"
+               class="btn btn-primary">
+                ➕ Create First Assignment
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
